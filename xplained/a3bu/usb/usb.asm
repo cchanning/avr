@@ -261,6 +261,7 @@ reset:
 	sts CPU_SPH, TEMP								; configure high byte of CPU stack pointer
 	ldi ZL, low(APPLICATION_STACK_START)						; configure low byte of application stack pointer
 	ldi ZH, high(APPLICATION_STACK_START)						; configure high byte of application stack pointer
+	sbiw Z, 1									; cause the SP to be one before the stack start address so the first push will put data at the stack start	
 
 	call configure_system_clock
 	call configure_usb
