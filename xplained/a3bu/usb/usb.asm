@@ -245,7 +245,7 @@ configure_usb_endpoints:
 		adiw Y, ENDPOINT_OFFSET_STATUS
 		st Y, TEMP2
 		calculateOutputEndpointPtr TEMP1						
-		adiw Y, ENDPOINT_OFFSET_STATUS
+		adiw Y, ENDPOINT_OFFSET_CTRL
 		popa TEMP2
 		st Y, TEMP2
 		eor TEMP2, TEMP2
@@ -284,7 +284,7 @@ configure_usb_endpoints:
 		adiw Y, ENDPOINT_OFFSET_STATUS
 		st Y, TEMP2
 		calculateInputEndpointPtr TEMP1						
-		adiw Y, ENDPOINT_OFFSET_STATUS
+		adiw Y, ENDPOINT_OFFSET_CTRL
 		popa TEMP2
 		st Y, TEMP2
 		eor TEMP2, TEMP2
