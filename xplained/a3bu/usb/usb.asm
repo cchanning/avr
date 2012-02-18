@@ -8,11 +8,11 @@
  *
  *
  *	+--------------------------------------+
+ *	+ Application Stack
+ *	+--------------------------------------+
  *	+ Endpoint Configuration Table
  *	+--------------------------------------+
- *	+ 
- *	+--------------------------------------+
- *	+ 
+ *	+ Endpoint Data Heap
  *	+--------------------------------------+
  *
  *
@@ -21,17 +21,35 @@
 .cseg
 
 /*********************************************************************************************
- * Register aliases
+ * Register Aliases
  *********************************************************************************************/
 
-.def TEMP R25
-.def TEMP1 R24
-.def TEMP2 R23
-.def TEMP3 R22
-.def TEMP4 R21
+.def TEMP R24
+.def TEMP1 R23
+.def TEMP2 R22
+.def TEMP3 R21
+.def TEMP4 R20
 
 /*********************************************************************************************
- * USB endpoint constants
+ * Application Stack
+ *********************************************************************************************/
+
+.equ APPLICATION_STACK_START = RAMSTART
+
+.macro pusha
+	adiw Z, 1
+	ldi TEMP, @0
+	st Z, TEMP
+.endm
+
+.macro popa
+	ld @0, Z
+	sbiw Z, 1
+.endm
+
+
+/*********************************************************************************************
+ * USB Endpoint
  *********************************************************************************************/
 
 .equ ENDPOINT_COUNT = 2
@@ -48,27 +66,6 @@
 .equ ENDPOINT_OFFSET_AUXDATAL = 6
 .equ ENDPOINT_OFFSET_AUXDATAH = 7
 
-
-.org 0x0000
-	jmp reset
-.org USB_TRNCOMPL_vect
-	reti												; source = TRNIF (An IN/OUT transaction has completed)
-	jmp isr_device_handle_setup_request					; source = SETUPIF (A SETUP transaction has completed)
-
-reset:
-	ldi R29, low(RAMEND)
-	sts CPU_SPL, R29									; configure low byte of stack pointer
-	ldi R29, high(RAMEND)
-	sts CPU_SPH, R29									; configure high byte of stack pointer
-	call configure_system_clock
-	call configure_usb
-	call enable_interrupts
-	call enable_usb
-
-	jmp main											; jump to the main program loop
-
-main:
-	jmp main
 
 /****************************************************************************************
  * Clock Functions
@@ -246,3 +243,31 @@ device_set_interface:
 
 device_sync_frame:
 	ret
+
+/*********************************************************************************************
+ * Main
+ *********************************************************************************************/
+
+.org 0x0000
+	jmp reset
+.org USB_TRNCOMPL_vect
+	reti										; source = TRNIF (An IN/OUT transaction has completed)
+	jmp isr_device_handle_setup_request						; source = SETUPIF (A SETUP transaction has completed)
+
+reset:
+	ldi TEMP, low(RAMEND)
+	sts CPU_SPL, TEMP								; configure low byte of CPU stack pointer
+	ldi TEMP, high(RAMEND)
+	sts CPU_SPH, TEMP								; configure high byte of CPU stack pointer
+	ldi ZL, low(APPLICATION_STACK_START)						; configure low byte of application stack pointer
+	ldi ZH, high(APPLICATION_STACK_START)						; configure high byte of application stack pointer
+
+	call configure_system_clock
+	call configure_usb
+	call enable_interrupts
+	call enable_usb
+
+	jmp main									; jump to the main program loop
+
+main:
+	jmp main									; keep the CPU busy forever
