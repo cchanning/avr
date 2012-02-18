@@ -21,6 +21,16 @@
  .include "ATxmega256A3BUdef.inc"
 
  /*********************************************************************************************
+ * Register Aliases
+ *********************************************************************************************/
+
+.def TEMP = R24
+.def TEMP1 = R23
+.def TEMP2 = R22
+.def TEMP3 = R21
+.def TEMP4 = R20
+
+ /*********************************************************************************************
  * Main
  *********************************************************************************************/
 
@@ -51,20 +61,11 @@ main:
 	jmp main									; keep the CPU busy forever
 
 /*********************************************************************************************
- * Register Aliases
- *********************************************************************************************/
-
-.def TEMP = R24
-.def TEMP1 = R23
-.def TEMP2 = R22
-.def TEMP3 = R21
-.def TEMP4 = R20
-
-/*********************************************************************************************
  * Application Stack
  *********************************************************************************************/
 
 .equ APPLICATION_STACK_START = SRAM_START
+.equ APPLICATION_STACK_SIZE = 16
 
 .macro pusha
 	adiw Z, 1
@@ -74,6 +75,8 @@ main:
 
 .macro popa
 	ld @0, Z
+	ldi R16, 0
+	st Z, R16
 	sbiw Z, 1
 .endm
 
@@ -84,9 +87,8 @@ main:
 
 .equ ENDPOINT_COUNT = 2
 .equ ENDPOINT_DATA_BUFFER_SIZE = 32
-.equ ENDPOINT_BASE = APPLICATION_STACK_START + ((ENDPOINT_COUNT + 1) * 4)
-.equ ENDPOINT_DATA_BUFFER_BASE = ENDPOINT_BASE + ((ENDPOINT_COUNT + 1) * 16) + 2	; assume we have FIFO and frame number tracking on
-
+.equ ENDPOINT_CFG_TBL_START = APPLICATION_STACK_START + APPLICATION_STACK_SIZE
+.equ ENDPOINT_START = ENDPOINT_CFG_TBL_START + ((ENDPOINT_COUNT + 1) * 4)
 .equ ENDPOINT_OFFSET_STATUS = 0
 .equ ENDPOINT_OFFSET_CTRL = 1
 .equ ENDPOINT_OFFSET_CNTL = 2
@@ -96,6 +98,31 @@ main:
 .equ ENDPOINT_OFFSET_AUXDATAL = 6
 .equ ENDPOINT_OFFSET_AUXDATAH = 7
 
+
+/*
+ * This macro will calculate the pointer to the start of the output portion of endpoint and place the pointer in Y
+ *
+ * Parameter 0 - the endpoint number ranging from 0 - n
+ */
+.macro calculateOutputEndpointPtr
+		ldi YL, low(ENDPOINT_START)						; configure low byte of pointer to the first endpoint
+		ldi YH, high(ENDPOINT_START)					; configure high byte of pointer to the first endpoint
+		mov R19, @0
+		ldi R18, 16
+		mul R19, R18									; MUL saves result in R1:R0 where R1 == HIGH and R0 == low
+		add YL, R0
+		adc YH, R1
+.endm
+
+/*
+ * This macro will calculate the pointer to the start of the input portion of the endpoint and place the pointer in Y
+ *
+ * Parameter 0 - the endpoint number ranging from 0 - n
+ */
+.macro calculateInputEndpointPtr
+	calculateOutputEndpointPtr @0						; configure Y to point at the output portion of the endpoint
+	adiw Y, 8											; the input portion of the endpoint is always 8 bytes from the start of the output portion
+.endm
 
 /****************************************************************************************
  * Clock Functions
@@ -202,37 +229,91 @@ configure_usb:
  * USB Endpoint Functions
  ****************************************************************************************/
 configure_usb_endpoints:
-	/*ldi TEMP, low(SRAM_START)
-	sts USB_EPPTRL, TEMP								; configure low byte of endpoint table pointer
-	ldi TEMP, high(SRAM_START)
-	sts USB_EPPTRH, TEMP								; configure high byte of endpoint table pointer
+	ldi TEMP, low(ENDPOINT_CFG_TBL_START)
+	sts USB_EPPTR, TEMP									; configure low byte of endpoint config table pointer
+	ldi TEMP, high(ENDPOINT_CFG_TBL_START)
+	sts USB_EPPTR + 1, TEMP								; configure high byte of endpoint config table pointer
 
-	ldi	TEMP, 0b01000000;		
-	sts ENDPOINT_0_OUT_CTRL, TEMP						; configure endpoint 0 (out) be a control type with interrupts enabled for FIFO
-	ldi TEMP, low(ENDPOINT_0_OUT_DATA_BUFFER_BASE)
-	sts ENDPOINT_0_OUT_DATAPTRL, TEMP					; configure the dataptr low byte for EP 0 out
-	ldi TEMP, high(ENDPOINT_0_OUT_DATA_BUFFER_BASE)
-	sts ENDPOINT_0_OUT_DATAPTRH, TEMP					; configure the dataptr high byte for EP 0 out
-	ldi TEMP, 0x00
-	sts ENDPOINT_0_OUT_STATUS, TEMP					; reset EP 0 out status byte
-	sts ENDPOINT_0_OUT_CNTL, TEMP						; reset EP 0 out count low byte
-	sts ENDPOINT_0_OUT_CNTH, TEMP						; reset EP 0 out count high byte
-	sts ENDPOINT_0_OUT_AUXDATAL, TEMP					; reset EP 0 out auxdata low byte
-	sts ENDPOINT_0_OUT_AUXDATAH, TEMP					; reset EP 0 out auxdata high byte
+	pusha 0b01000000									; push endpoint config byte, control type with interrupts enabled for FIFO
+	pusha 0b10000000									; push endpoint config byte, bulk type with interrupts enabled for FIFO
+	ldi TEMP1, 0
 
-	ldi	TEMP, 0b01000000;		
-	sts ENDPOINT_0_IN_CTRL, TEMP						; configure endpoint 0 (in) be a control type with interrupts enabled for FIFO
-	ldi TEMP, low(ENDPOINT_0_IN_DATA_BUFFER_BASE)
-	sts ENDPOINT_0_IN_DATAPTRL, TEMP					; configure the dataptr low byte for EP 0 in
-	ldi TEMP, high(ENDPOINT_0_IN_DATA_BUFFER_BASE)
-	sts ENDPOINT_0_IN_DATAPTRH, TEMP					; configure the dataptr high byte for EP 0 in
-	ldi TEMP, 0x00
-	sts ENDPOINT_0_IN_STATUS, TEMP						; reset EP 0 out status byte
-	sts ENDPOINT_0_IN_CNTL, TEMP						; reset EP 0 in count low byte
-	sts ENDPOINT_0_IN_CNTH, TEMP						; reset EP 0 in count high byte
-	sts ENDPOINT_0_IN_AUXDATAL, TEMP					; reset EP 0 in auxdata low byte
-	sts ENDPOINT_0_IN_AUXDATAH, TEMP					; reset EP 0 in auxdata high byte
-	*/ret
+	//for each offset we need to reset Y to point at the start of the output endpoint, as the offsets will always be relevant to the start (Y + offset)
+	ENDPOINT_OUTPUT_CONFIG_LOOP:
+		eor TEMP2, TEMP2							
+		calculateOutputEndpointPtr TEMP1					
+		adiw Y, ENDPOINT_OFFSET_STATUS
+		st Y, TEMP2
+		calculateOutputEndpointPtr TEMP1						
+		adiw Y, ENDPOINT_OFFSET_STATUS
+		popa TEMP2
+		st Y, TEMP2
+		eor TEMP2, TEMP2
+		calculateOutputEndpointPtr TEMP1						
+		adiw Y, ENDPOINT_OFFSET_CNTL
+		st Y, TEMP2
+		calculateOutputEndpointPtr TEMP1						
+		adiw Y, ENDPOINT_OFFSET_CNTH
+		st Y, TEMP2
+		calculateOutputEndpointPtr TEMP1						
+		adiw Y, ENDPOINT_OFFSET_DATAPTRL
+		st Y, TEMP2
+		calculateOutputEndpointPtr TEMP1						
+		adiw Y, ENDPOINT_OFFSET_DATAPTRH
+		st Y, TEMP2
+		calculateOutputEndpointPtr TEMP1						
+		adiw Y, ENDPOINT_OFFSET_AUXDATAL
+		st Y, TEMP2
+		calculateOutputEndpointPtr TEMP1
+		adiw Y, ENDPOINT_OFFSET_AUXDATAH
+		st Y, TEMP2
+
+		inc TEMP1
+		ldi TEMP2, ENDPOINT_COUNT
+		cpse TEMP1, TEMP2
+		jmp ENDPOINT_OUTPUT_CONFIG_LOOP
+
+	pusha 0b01000000									; push endpoint config byte, control type with interrupts enabled for FIFO
+	pusha 0b10000000									; push endpoint config byte, bulk type with interrupts enabled for FIFO
+	ldi TEMP1, 0
+
+	//for each offset we need to reset Y to point at the start of the input endpoint, as the offsets will always be relevant to the start (Y + offset)
+	ENDPOINT_INPUT_CONFIG_LOOP:
+		eor TEMP2, TEMP2							
+		calculateInputEndpointPtr TEMP1					
+		adiw Y, ENDPOINT_OFFSET_STATUS
+		st Y, TEMP2
+		calculateInputEndpointPtr TEMP1						
+		adiw Y, ENDPOINT_OFFSET_STATUS
+		popa TEMP2
+		st Y, TEMP2
+		eor TEMP2, TEMP2
+		calculateInputEndpointPtr TEMP1						
+		adiw Y, ENDPOINT_OFFSET_CNTL
+		st Y, TEMP2
+		calculateInputEndpointPtr TEMP1						
+		adiw Y, ENDPOINT_OFFSET_CNTH
+		st Y, TEMP2
+		calculateInputEndpointPtr TEMP1						
+		adiw Y, ENDPOINT_OFFSET_DATAPTRL
+		st Y, TEMP2
+		calculateInputEndpointPtr TEMP1						
+		adiw Y, ENDPOINT_OFFSET_DATAPTRH
+		st Y, TEMP2
+		calculateInputEndpointPtr TEMP1						
+		adiw Y, ENDPOINT_OFFSET_AUXDATAL
+		st Y, TEMP2
+		calculateInputEndpointPtr TEMP1
+		adiw Y, ENDPOINT_OFFSET_AUXDATAH
+		st Y, TEMP2
+
+		inc TEMP1
+		ldi TEMP2, ENDPOINT_COUNT
+		cpse TEMP1, TEMP2
+		jmp ENDPOINT_INPUT_CONFIG_LOOP
+
+	ret
+
 
 /****************************************************************************************
  * USB Request Token Handling Functions e.g. SETUP
