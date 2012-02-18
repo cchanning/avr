@@ -24,6 +24,7 @@
  * Main
  *********************************************************************************************/
 
+.cseg
 .org 0x0000
 	jmp reset
 .org USB_TRNCOMPL_vect
@@ -107,8 +108,8 @@ main:
 configure_system_clock:
 	call configure_32mhz_int_osc						; make sure the 32Mhz internal oscillator is configured and is stable for use
 	call configure_pll									; configure the PLL
-	ldi TEMP, 0b00011100
-	sts CLK_PSCTRL, TEMP								; set prescaler A to div by 16, disable prescalers C/B (CPU etc will run at 3Mhz)
+	ldi TEMP, 0b00001100
+	sts CLK_PSCTRL, TEMP								; set prescaler A to div by 4, disable prescalers C/B (CPU etc will run at 12Mhz)
 	ldi TEMP, 0b00000100
 	sts CLK_CTRL, TEMP									; set the clock source as PLL
 	ret
