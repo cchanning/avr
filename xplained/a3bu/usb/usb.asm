@@ -17,24 +17,53 @@
  *
  *
  *********************************************************************************************/
+ 
+ .include "ATxmega256A3BUdef.inc"
 
-.cseg
+ /*********************************************************************************************
+ * Main
+ *********************************************************************************************/
+
+.org 0x0000
+	jmp reset
+.org USB_TRNCOMPL_vect
+	reti										; source = TRNIF (An IN/OUT transaction has completed)
+	jmp isr_device_handle_setup_request						; source = SETUPIF (A SETUP transaction has completed)
+
+reset:
+	ldi TEMP, low(RAMEND)
+	sts CPU_SPL, TEMP								; configure low byte of CPU stack pointer
+	ldi TEMP, high(RAMEND)
+	sts CPU_SPH, TEMP								; configure high byte of CPU stack pointer
+	ldi ZL, low(APPLICATION_STACK_START)						; configure low byte of application stack pointer
+	ldi ZH, high(APPLICATION_STACK_START)						; configure high byte of application stack pointer
+	sbiw Z, 1									; cause the SP to be one before the stack start address, this is required as a pusha will first increment Z. In the first usage scenario it will make sure the data is placed at the stack start address.	
+
+	call configure_system_clock
+	call configure_usb
+	call enable_interrupts
+	call enable_usb
+
+	jmp main									; jump to the main program loop
+
+main:
+	jmp main									; keep the CPU busy forever
 
 /*********************************************************************************************
  * Register Aliases
  *********************************************************************************************/
 
-.def TEMP R24
-.def TEMP1 R23
-.def TEMP2 R22
-.def TEMP3 R21
-.def TEMP4 R20
+.def TEMP = R24
+.def TEMP1 = R23
+.def TEMP2 = R22
+.def TEMP3 = R21
+.def TEMP4 = R20
 
 /*********************************************************************************************
  * Application Stack
  *********************************************************************************************/
 
-.equ APPLICATION_STACK_START = RAMSTART
+.equ APPLICATION_STACK_START = SRAM_START
 
 .macro pusha
 	adiw Z, 1
@@ -172,7 +201,7 @@ configure_usb:
  * USB Endpoint Functions
  ****************************************************************************************/
 configure_usb_endpoints:
-	ldi TEMP, low(SRAM_START)
+	/*ldi TEMP, low(SRAM_START)
 	sts USB_EPPTRL, TEMP								; configure low byte of endpoint table pointer
 	ldi TEMP, high(SRAM_START)
 	sts USB_EPPTRH, TEMP								; configure high byte of endpoint table pointer
@@ -202,7 +231,7 @@ configure_usb_endpoints:
 	sts ENDPOINT_0_IN_CNTH, TEMP						; reset EP 0 in count high byte
 	sts ENDPOINT_0_IN_AUXDATAL, TEMP					; reset EP 0 in auxdata low byte
 	sts ENDPOINT_0_IN_AUXDATAH, TEMP					; reset EP 0 in auxdata high byte
-	ret
+	*/ret
 
 /****************************************************************************************
  * USB Request Token Handling Functions e.g. SETUP
@@ -243,32 +272,3 @@ device_set_interface:
 
 device_sync_frame:
 	ret
-
-/*********************************************************************************************
- * Main
- *********************************************************************************************/
-
-.org 0x0000
-	jmp reset
-.org USB_TRNCOMPL_vect
-	reti										; source = TRNIF (An IN/OUT transaction has completed)
-	jmp isr_device_handle_setup_request						; source = SETUPIF (A SETUP transaction has completed)
-
-reset:
-	ldi TEMP, low(RAMEND)
-	sts CPU_SPL, TEMP								; configure low byte of CPU stack pointer
-	ldi TEMP, high(RAMEND)
-	sts CPU_SPH, TEMP								; configure high byte of CPU stack pointer
-	ldi ZL, low(APPLICATION_STACK_START)						; configure low byte of application stack pointer
-	ldi ZH, high(APPLICATION_STACK_START)						; configure high byte of application stack pointer
-	sbiw Z, 1									; cause the SP to be one before the stack start address, this is required as a pusha will first increment Z. In the first usage scenario it will make sure the data is placed at the stack start address.	
-
-	call configure_system_clock
-	call configure_usb
-	call enable_interrupts
-	call enable_usb
-
-	jmp main									; jump to the main program loop
-
-main:
-	jmp main									; keep the CPU busy forever
