@@ -242,30 +242,31 @@ configure_usb_endpoints:
 	//for each offset we need to reset Y to point at the start of the output endpoint, as the offsets will always be relative to the start (Y + offset)
 	ENDPOINT_OUTPUT_CONFIG_LOOP:
 		eor TEMP2, TEMP2							
-		coep TEMP1					
+		coep TEMP1									;calculate ptr and then copy it to X so we can keep using it later
+		movw X, Y			
 		adiw Y, ENDPOINT_OFFSET_STATUS
 		st Y, TEMP2
-		coep TEMP1						
+		movw Y, X				
 		adiw Y, ENDPOINT_OFFSET_CTRL
 		popa TEMP2
 		st Y, TEMP2
 		eor TEMP2, TEMP2
-		coep TEMP1						
+		movw Y, X						
 		adiw Y, ENDPOINT_OFFSET_CNTL
 		st Y, TEMP2
-		coep TEMP1						
+		movw Y, X					
 		adiw Y, ENDPOINT_OFFSET_CNTH
 		st Y, TEMP2
-		coep TEMP1						
+		movw Y, X						
 		adiw Y, ENDPOINT_OFFSET_DATAPTRL
 		st Y, TEMP2
-		coep TEMP1						
+		movw Y, X					
 		adiw Y, ENDPOINT_OFFSET_DATAPTRH
 		st Y, TEMP2
-		coep TEMP1						
+		movw Y, X						
 		adiw Y, ENDPOINT_OFFSET_AUXDATAL
 		st Y, TEMP2
-		coep TEMP1
+		movw Y, X	
 		adiw Y, ENDPOINT_OFFSET_AUXDATAH
 		st Y, TEMP2
 
@@ -281,30 +282,31 @@ configure_usb_endpoints:
 	//for each offset we need to reset Y to point at the start of the input endpoint, as the offsets will always be relevant to the start (Y + offset)
 	ENDPOINT_INPUT_CONFIG_LOOP:
 		eor TEMP2, TEMP2							
-		ciep TEMP1					
+		ciep TEMP1									;calculate ptr and then copy it to X so we can keep using it later
+		movw X, Y			
 		adiw Y, ENDPOINT_OFFSET_STATUS
 		st Y, TEMP2
-		ciep TEMP1						
+		movw Y, X				
 		adiw Y, ENDPOINT_OFFSET_CTRL
 		popa TEMP2
 		st Y, TEMP2
 		eor TEMP2, TEMP2
-		ciep TEMP1						
+		movw Y, X						
 		adiw Y, ENDPOINT_OFFSET_CNTL
 		st Y, TEMP2
-		ciep TEMP1						
+		movw Y, X						
 		adiw Y, ENDPOINT_OFFSET_CNTH
 		st Y, TEMP2
-		ciep TEMP1						
+		movw Y, X					
 		adiw Y, ENDPOINT_OFFSET_DATAPTRL
 		st Y, TEMP2
-		ciep TEMP1						
+		movw Y, X					
 		adiw Y, ENDPOINT_OFFSET_DATAPTRH
 		st Y, TEMP2
-		ciep TEMP1						
+		movw Y, X						
 		adiw Y, ENDPOINT_OFFSET_AUXDATAL
 		st Y, TEMP2
-		ciep TEMP1
+		movw Y, X	
 		adiw Y, ENDPOINT_OFFSET_AUXDATAH
 		st Y, TEMP2
 
