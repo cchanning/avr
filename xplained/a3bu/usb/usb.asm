@@ -242,8 +242,8 @@ configure_usb_endpoints:
 	//for each offset we need to reset Y to point at the start of the output endpoint, as the offsets will always be relative to the start (Y + offset)
 	ENDPOINT_OUTPUT_CONFIG_LOOP:
 		eor TEMP2, TEMP2							
-		coep TEMP1									;calculate ptr and then copy it to X so we can keep using it later
-		movw X, Y			
+		coep TEMP1									; calculate input endpoint ptr 
+		movw X, Y									; copy pointer to X so we can keep using it later		
 		adiw Y, ENDPOINT_OFFSET_STATUS
 		st Y, TEMP2
 		movw Y, X				
@@ -282,8 +282,8 @@ configure_usb_endpoints:
 	//for each offset we need to reset Y to point at the start of the input endpoint, as the offsets will always be relevant to the start (Y + offset)
 	ENDPOINT_INPUT_CONFIG_LOOP:
 		eor TEMP2, TEMP2							
-		ciep TEMP1									;calculate ptr and then copy it to X so we can keep using it later
-		movw X, Y			
+		ciep TEMP1									; calculate input endpoint ptr 
+		movw X, Y									; copy pointer to X so we can keep using it later
 		adiw Y, ENDPOINT_OFFSET_STATUS
 		st Y, TEMP2
 		movw Y, X				
