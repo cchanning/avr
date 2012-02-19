@@ -8,7 +8,7 @@
  *
  *
  *	+--------------------------------------+
- *	+ Application Stack
+ *	+ Application Stack (Y register)
  *	+--------------------------------------+
  *	+ Endpoint Configuration Table
  *	+--------------------------------------+
@@ -35,6 +35,7 @@
  *********************************************************************************************/
 
 .cseg
+
 .org 0x0000
 	jmp reset
 .org USB_BUSEVENT_vect
@@ -68,10 +69,16 @@ main:
 .equ APPLICATION_STACK_START = SRAM_START
 .equ APPLICATION_STACK_SIZE = 32
 
+.macro pushai
+	adiw Z, 1
+	ldi R16, @0
+	st Z, R16
+.endm
+
 .macro pusha
 	adiw Z, 1
-	ldi TEMP, @0
-	st Z, TEMP
+	mov R16, @0
+	st Z, R16
 .endm
 
 .macro popa
@@ -86,9 +93,9 @@ main:
  *********************************************************************************************/
 
 .equ ENDPOINT_COUNT = 2
-.equ ENDPOINT_DATA_BUFFER_SIZE = 32
 .equ ENDPOINT_CFG_TBL_START = APPLICATION_STACK_START + APPLICATION_STACK_SIZE
 .equ ENDPOINT_START = ENDPOINT_CFG_TBL_START //in the future FIFO maybe enabled meaning the ENDPOINT_START is further from the cfg table start
+
 .equ ENDPOINT_OFFSET_STATUS = 0
 .equ ENDPOINT_OFFSET_CTRL = 1
 .equ ENDPOINT_OFFSET_CNTL = 2
@@ -98,6 +105,11 @@ main:
 .equ ENDPOINT_OFFSET_AUXDATAL = 6
 .equ ENDPOINT_OFFSET_AUXDATAH = 7
 
+.equ ENDPOINT_MASK_TYPE_CONTROL = 0b01000000
+.equ ENDPOINT_MASK_TYPE_BULK = 0b10000000
+
+.equ ENDPOINT_BUFFER_SIZE_32_MASK = 0b00000010
+.equ ENDPOINT_BUFFER_SIZE_MASK = ENDPOINT_BUFFER_SIZE_32_MASK
 
 /*
  * This macro will calculate the pointer to the start of the output portion of endpoint and place the pointer in Y
@@ -229,107 +241,130 @@ configure_usb:
  * USB Endpoint Functions
  ****************************************************************************************/
 
+configure_usb_endpoint_pipe:
+	popa XL									; pop the low byte of the endpoint address from the application stack
+	popa XH									; pop the high byte of the endpoint address from the application stack
+	eor TEMP, TEMP							
+	adiw Y, ENDPOINT_OFFSET_STATUS
+	st Y, TEMP
+	movw Y, X				
+	adiw Y, ENDPOINT_OFFSET_CTRL
+	popa TEMP									; pop the type of endpoint to use from the application stack
+	ori TEMP, ENDPOINT_BUFFER_SIZE_MASK		; set the buffer size for the endpoint
+	st Y, TEMP
+	eor TEMP, TEMP
+	movw Y, X						
+	adiw Y, ENDPOINT_OFFSET_CNTL
+	st Y, TEMP
+	movw Y, X					
+	adiw Y, ENDPOINT_OFFSET_CNTH
+	st Y, TEMP
+	movw Y, X						
+	adiw Y, ENDPOINT_OFFSET_DATAPTRL
+	st Y, TEMP
+	movw Y, X					
+	adiw Y, ENDPOINT_OFFSET_DATAPTRH
+	st Y, TEMP
+	movw Y, X						
+	adiw Y, ENDPOINT_OFFSET_AUXDATAL
+	st Y, TEMP
+	movw Y, X	
+	adiw Y, ENDPOINT_OFFSET_AUXDATAH
+	st Y, TEMP
+
+	ret
+
 configure_usb_endpoints:
 	ldi TEMP, low(ENDPOINT_CFG_TBL_START)
 	sts USB_EPPTR, TEMP								; configure low byte of endpoint config table pointer
 	ldi TEMP, high(ENDPOINT_CFG_TBL_START)
 	sts USB_EPPTR + 1, TEMP							; configure high byte of endpoint config table pointer
+	ldi TEMP1, 0									; configure endpoint counter
 
-	pusha 0b01000000								; push endpoint config byte, control type with interrupts enabled for FIFO
-	pusha 0b10000000								; push endpoint config byte, bulk type with interrupts enabled for FIFO
-	ldi TEMP1, 0
+	//configure endpoint 0 out pipe
+	coep TEMP1
+	pushai ENDPOINT_MASK_TYPE_CONTROL
+	pusha YH 
+	pusha YL
+	call configure_usb_endpoint_pipe
 
-	//for each offset we need to reset Y to point at the start of the output endpoint, as the offsets will always be relative to the start (Y + offset)
-	ENDPOINT_OUTPUT_CONFIG_LOOP:
-		eor TEMP2, TEMP2							
-		coep TEMP1									; calculate input endpoint ptr 
-		movw X, Y									; copy pointer to X so we can keep using it later		
-		adiw Y, ENDPOINT_OFFSET_STATUS
-		st Y, TEMP2
-		movw Y, X				
-		adiw Y, ENDPOINT_OFFSET_CTRL
-		popa TEMP2
-		st Y, TEMP2
-		eor TEMP2, TEMP2
-		movw Y, X						
-		adiw Y, ENDPOINT_OFFSET_CNTL
-		st Y, TEMP2
-		movw Y, X					
-		adiw Y, ENDPOINT_OFFSET_CNTH
-		st Y, TEMP2
-		movw Y, X						
-		adiw Y, ENDPOINT_OFFSET_DATAPTRL
-		st Y, TEMP2
-		movw Y, X					
-		adiw Y, ENDPOINT_OFFSET_DATAPTRH
-		st Y, TEMP2
-		movw Y, X						
-		adiw Y, ENDPOINT_OFFSET_AUXDATAL
-		st Y, TEMP2
-		movw Y, X	
-		adiw Y, ENDPOINT_OFFSET_AUXDATAH
-		st Y, TEMP2
+	//configure endpoint 0 in pipe
+	ciep TEMP1
+	pushai ENDPOINT_MASK_TYPE_CONTROL
+	pusha YH 
+	pusha YL
+	call configure_usb_endpoint_pipe
+	inc TEMP1
+
+	ENDPOINT_CONFIG_LOOP: 
+		//configure endpoint n output pipe							
+		coep TEMP1
+		pushai ENDPOINT_MASK_TYPE_BULK
+		pusha YH 
+		pusha YL
+		call configure_usb_endpoint_pipe
+
+		//configure endpoint n input pipe
+		ciep TEMP1
+		pushai ENDPOINT_MASK_TYPE_CONTROL
+		pusha YH 
+		pusha YL
+		call configure_usb_endpoint_pipe
 
 		inc TEMP1
 		ldi TEMP2, ENDPOINT_COUNT
 		cpse TEMP1, TEMP2
-		jmp ENDPOINT_OUTPUT_CONFIG_LOOP
-
-	pusha 0b01000000								; push endpoint config byte, control type with interrupts enabled for FIFO
-	pusha 0b10000000								; push endpoint config byte, bulk type with interrupts enabled for FIFO
-	ldi TEMP1, 0
-
-	//for each offset we need to reset Y to point at the start of the input endpoint, as the offsets will always be relevant to the start (Y + offset)
-	ENDPOINT_INPUT_CONFIG_LOOP:
-		eor TEMP2, TEMP2							
-		ciep TEMP1									; calculate input endpoint ptr 
-		movw X, Y									; copy pointer to X so we can keep using it later
-		adiw Y, ENDPOINT_OFFSET_STATUS
-		st Y, TEMP2
-		movw Y, X				
-		adiw Y, ENDPOINT_OFFSET_CTRL
-		popa TEMP2
-		st Y, TEMP2
-		eor TEMP2, TEMP2
-		movw Y, X						
-		adiw Y, ENDPOINT_OFFSET_CNTL
-		st Y, TEMP2
-		movw Y, X						
-		adiw Y, ENDPOINT_OFFSET_CNTH
-		st Y, TEMP2
-		movw Y, X					
-		adiw Y, ENDPOINT_OFFSET_DATAPTRL
-		st Y, TEMP2
-		movw Y, X					
-		adiw Y, ENDPOINT_OFFSET_DATAPTRH
-		st Y, TEMP2
-		movw Y, X						
-		adiw Y, ENDPOINT_OFFSET_AUXDATAL
-		st Y, TEMP2
-		movw Y, X	
-		adiw Y, ENDPOINT_OFFSET_AUXDATAH
-		st Y, TEMP2
-
-		inc TEMP1
-		ldi TEMP2, ENDPOINT_COUNT
-		cpse TEMP1, TEMP2
-		jmp ENDPOINT_INPUT_CONFIG_LOOP
+		jmp ENDPOINT_CONFIG_LOOP
 
 	ret
 
-clear_usb_interrupt_flags:
+clear_usb_interrupt_flags_a:
 	ldi TEMP, 0b11111111
 	sts USB_INTFLAGSACLR, TEMP
 	ret
 
+handle_usb_setup_request:
+	ldi TEMP1, 1									; initialize the endpoint counter, exclude 0 as this is handled outside of the loop
+
+	//loop through all output type endpoints (SETUP packets are always sent from host to client, making it an output transfer type)
+	HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP:
+		coep TEMP1
+		adiw Y, ENDPOINT_OFFSET_CTRL
+		ld TEMP2, Y
+		andi TEMP2, 0b01000000						; bitwise "and" with bitmask to check if the endpoint is actually a "control" type
+
+		inc TEMP1
+		ldi TEMP2, ENDPOINT_COUNT
+		cpse TEMP1, TEMP2
+		jmp HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP
+	ret
+
+handle_usb_io_request:
+	ret
+
+
 /****************************************************************************************
- * USB Request Token Handling Functions e.g. SETUP
+ * USB ISRs
  ****************************************************************************************/
 
 isr_device_bus_event:
-	call clear_usb_interrupt_flags
+	call clear_usb_interrupt_flags_a
 	reti
 
+/*
+	This ISR will examine each endpoint to determine which endpoint recieved data or 
+	needs to respond to a SETUP request. Once found the ISR will push the address of
+	the endpoint on the application stack and invoke the relevant handler.
+
+	The USB interrupt flags will be cleared before returning.
+ */
 isr_device_transaction_complete:
-	call clear_usb_interrupt_flags
+
+	lds TEMP1, USB_INTFLAGSBSET						; read current interrupt flag to check if this txn was setup or IO
+	andi TEMP2, 0b00000001							; bitwise "and" with bitmask to check if the transaction type was SETUP
+	sbrc TEMP2, 0									; skip next instruction if bit 0 is != 1
+	call handle_usb_setup_request
+	sbrs TEMP2, 0									; skip next instruction if bit 0 is != 0
+	call handle_usb_io_request
+	call clear_usb_interrupt_flags_a
 	reti
