@@ -273,7 +273,7 @@ configure_usb_endpoints:
 
 		//configure endpoint n input pipe
 		ciep TEMP1
-		pushai ENDPOINT_MASK_TYPE_CONTROL
+		pushai ENDPOINT_MASK_TYPE_BULK
 		pusha YH 
 		pusha YL
 		call configure_usb_endpoint_pipe
