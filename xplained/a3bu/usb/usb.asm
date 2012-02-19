@@ -66,7 +66,7 @@ main:
  *********************************************************************************************/
 
 .equ APPLICATION_STACK_START = SRAM_START
-.equ APPLICATION_STACK_SIZE = 16
+.equ APPLICATION_STACK_SIZE = 32
 
 .macro pusha
 	adiw Z, 1
