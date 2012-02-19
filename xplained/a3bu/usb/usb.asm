@@ -241,39 +241,6 @@ configure_usb:
  * USB Endpoint Functions
  ****************************************************************************************/
 
-configure_usb_endpoint_pipe:
-	popa XL									; pop the low byte of the endpoint address from the application stack
-	popa XH									; pop the high byte of the endpoint address from the application stack
-	eor TEMP, TEMP							
-	adiw Y, ENDPOINT_OFFSET_STATUS
-	st Y, TEMP
-	movw Y, X				
-	adiw Y, ENDPOINT_OFFSET_CTRL
-	popa TEMP									; pop the type of endpoint to use from the application stack
-	ori TEMP, ENDPOINT_BUFFER_SIZE_MASK		; set the buffer size for the endpoint
-	st Y, TEMP
-	eor TEMP, TEMP
-	movw Y, X						
-	adiw Y, ENDPOINT_OFFSET_CNTL
-	st Y, TEMP
-	movw Y, X					
-	adiw Y, ENDPOINT_OFFSET_CNTH
-	st Y, TEMP
-	movw Y, X						
-	adiw Y, ENDPOINT_OFFSET_DATAPTRL
-	st Y, TEMP
-	movw Y, X					
-	adiw Y, ENDPOINT_OFFSET_DATAPTRH
-	st Y, TEMP
-	movw Y, X						
-	adiw Y, ENDPOINT_OFFSET_AUXDATAL
-	st Y, TEMP
-	movw Y, X	
-	adiw Y, ENDPOINT_OFFSET_AUXDATAH
-	st Y, TEMP
-
-	ret
-
 configure_usb_endpoints:
 	ldi TEMP, low(ENDPOINT_CFG_TBL_START)
 	sts USB_EPPTR, TEMP								; configure low byte of endpoint config table pointer
@@ -315,6 +282,39 @@ configure_usb_endpoints:
 		ldi TEMP2, ENDPOINT_COUNT
 		cpse TEMP1, TEMP2
 		jmp ENDPOINT_CONFIG_LOOP
+
+	ret
+
+configure_usb_endpoint_pipe:
+	popa XL									; pop the low byte of the endpoint address from the application stack
+	popa XH									; pop the high byte of the endpoint address from the application stack
+	eor TEMP, TEMP							
+	adiw Y, ENDPOINT_OFFSET_STATUS
+	st Y, TEMP
+	movw Y, X				
+	adiw Y, ENDPOINT_OFFSET_CTRL
+	popa TEMP									; pop the type of endpoint to use from the application stack
+	ori TEMP, ENDPOINT_BUFFER_SIZE_MASK		; set the buffer size for the endpoint
+	st Y, TEMP
+	eor TEMP, TEMP
+	movw Y, X						
+	adiw Y, ENDPOINT_OFFSET_CNTL
+	st Y, TEMP
+	movw Y, X					
+	adiw Y, ENDPOINT_OFFSET_CNTH
+	st Y, TEMP
+	movw Y, X						
+	adiw Y, ENDPOINT_OFFSET_DATAPTRL
+	st Y, TEMP
+	movw Y, X					
+	adiw Y, ENDPOINT_OFFSET_DATAPTRH
+	st Y, TEMP
+	movw Y, X						
+	adiw Y, ENDPOINT_OFFSET_AUXDATAL
+	st Y, TEMP
+	movw Y, X	
+	adiw Y, ENDPOINT_OFFSET_AUXDATAH
+	st Y, TEMP
 
 	ret
 
