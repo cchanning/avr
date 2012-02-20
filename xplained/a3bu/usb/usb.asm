@@ -285,6 +285,7 @@ configure_usb_endpoints:
 configure_usb_endpoint_pipe:
 	popa XL									; pop the low byte of the endpoint address from the application stack
 	popa XH									; pop the high byte of the endpoint address from the application stack
+	movw Y, X
 	eor TEMP, TEMP							
 	adiw Y, ENDPOINT_OFFSET_STATUS
 	st Y, TEMP
@@ -346,7 +347,7 @@ handle_usb_setup_request:
 		//now delegate to the parsing handler to process the request
 		pusha YH
 		pusha YL
-		call process_usb_setup_message
+		call process_usb_setup_request
 
 		//now check cleanup status register for endpoint
 		eor TEMP2, TEMP2										; the doc says write 1's to clear the endpoint status but I think this is a bug?
@@ -364,7 +365,25 @@ handle_usb_setup_request:
 handle_usb_io_request:
 	ret
 
-process_usb_setup_message:
+/*
+	This function will parse the SETUP request and invoke the appropriate handler
+
+	@param endpointOutputPipePtr
+ */
+process_usb_setup_request:
+	popa XL
+	popa XH
+
+	movw Y, X
+	adiw Y, ENDPOINT_OFFSET_DATAPTRL
+	ld TEMP1, Y
+	movw Y, X
+	adiw Y, ENDPOINT_OFFSET_DATAPTRH
+	ld TEMP2, Y															; temp2:temp1 now holds the DATAPTR for the endpoint
+	movw Z, TEMP2:TEMP1													; copy the DATAPTR address into Z
+
+	//decode the request type here and the invoke the associated handler
+
 	ret
 
 /****************************************************************************************
