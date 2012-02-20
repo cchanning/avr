@@ -192,7 +192,6 @@ configure_pll:
 		and TEMP2, TEMP3
 		cpse TEMP1, TEMP2							; when TEMP1 == TEMP2 the next instruction will be skipped, causing "ret" to be the next instruction to be executed
 		jmp PLL_NOT_READY
-
 	ret
 
 /*
@@ -215,7 +214,6 @@ enable_interrupts:
 	ldi TEMP, 0b00000001								
 	sts USB_INTCTRLB, TEMP								; enable interrupts to fire when SETUP transactions complete on USB
 	sei										; enable global interrupts
-
 	ret
 
 enable_usb:
@@ -282,7 +280,6 @@ configure_usb_endpoints:
 		ldi TEMP2, ENDPOINT_COUNT
 		cpse TEMP1, TEMP2
 		jmp ENDPOINT_CONFIG_LOOP
-
 	ret
 
 configure_usb_endpoint_pipe:
@@ -315,7 +312,6 @@ configure_usb_endpoint_pipe:
 	movw Y, X	
 	adiw Y, ENDPOINT_OFFSET_AUXDATAH
 	st Y, TEMP
-
 	ret
 
 clear_usb_interrupt_flags_a:
@@ -324,15 +320,41 @@ clear_usb_interrupt_flags_a:
 	ret
 
 handle_usb_setup_request:
-	ldi TEMP1, 1									; initialize the endpoint counter, exclude 0 as this is handled outside of the loop
+	ldi TEMP1, 0									; initialize the endpoint counter, exclude 0 as this is handled outside of the loop
 
 	//loop through all output type endpoints (SETUP packets are always sent from host to client, making it an output transfer type)
 	HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP:
+		//check if the endpoint is a control type
 		coep TEMP1
+		movw X, Y
 		adiw Y, ENDPOINT_OFFSET_CTRL
 		ld TEMP2, Y
-		andi TEMP2, 0b01000000						; bitwise "and" with bitmask to check if the endpoint is actually a "control" type
+		ldi TEMP3, ENDPOINT_MASK_TYPE_CONTROL
+		and TEMP2, TEMP3										; bitwise "and" with bitmask to check if the endpoint is actually a "control" type
+		cpse TEMP2, TEMP3										; if the endpoint isn't a control type, continue in the loop. If it is, the jmp instruction is skipped
+		jmp HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP_CONTINUE
+		
+		//now check if the endpoints status register reflects the setup txn
+		movw Y, X
+		adiw Y, ENDPOINT_OFFSET_STATUS
+		ld TEMP2, Y
+		ldi TEMP3, 0b00010000
+		and TEMP2, TEMP3										; bitwise "and" with bitmask to check if the endpoint is reporting a SETUP txn completing
+		cpse TEMP2, TEMP3										; if the endpoint hasn't had a SETUP txn complete, continue in the loop. If it has, the jmp instruction is skipped
+		jmp HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP_CONTINUE
 
+		//now delegate to the parsing handler to process the request
+		pusha YH
+		pusha YL
+		call process_usb_setup_message
+
+		//now check cleanup status register for endpoint
+		eor TEMP2, TEMP2										; the doc says write 1's to clear the endpoint status but I think this is a bug?
+		movw Y, X
+		adiw Y, ENDPOINT_OFFSET_STATUS
+		st Y, TEMP2 
+
+		HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP_CONTINUE:
 		inc TEMP1
 		ldi TEMP2, ENDPOINT_COUNT
 		cpse TEMP1, TEMP2
@@ -342,6 +364,8 @@ handle_usb_setup_request:
 handle_usb_io_request:
 	ret
 
+process_usb_setup_message:
+	ret
 
 /****************************************************************************************
  * USB ISRs
@@ -360,11 +384,11 @@ isr_device_bus_event:
  */
 isr_device_transaction_complete:
 
-	lds TEMP1, USB_INTFLAGSBSET						; read current interrupt flag to check if this txn was setup or IO
-	andi TEMP2, 0b00000001							; bitwise "and" with bitmask to check if the transaction type was SETUP
-	sbrc TEMP2, 0									; skip next instruction if bit 0 is != 1
+	lds TEMP, USB_INTFLAGSBSET						; read current interrupt flag to check if this txn was setup or IO
+	andi TEMP, 0b00000001							; bitwise "and" with bitmask to check if the transaction type was SETUP
+	sbrc TEMP, 0									; skip next instruction if bit 0 is != 1
 	call handle_usb_setup_request
-	sbrs TEMP2, 0									; skip next instruction if bit 0 is != 0
+	sbrs TEMP, 0									; skip next instruction if bit 0 is != 0
 	call handle_usb_io_request
 	call clear_usb_interrupt_flags_a
 	reti
