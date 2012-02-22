@@ -109,8 +109,7 @@ main:
 .endm
 
 /**
- * Restores/switches back the persisted application registers from the CPU stack, this macro should only be used in pstr was
- * used initially.
+ * Restores/switches back the persisted application registers from the CPU stack, this macro should only be used when ctxswi is used.
  */
 .macro ctxswib
 	pop XH
