@@ -8,11 +8,13 @@
  *
  *
  *	+------------------------------------------------------------------------------+
- *	+ Application Stack (Z register)
+ *	+ Application Stack (maintained by Z register)
  *	+------------------------------------------------------------------------------+
  *	+ Application Heap (First two bytes are reserved for the free byte pointer)
  *	+------------------------------------------------------------------------------+
  *	+ Endpoint Configuration Table
+ *	+------------------------------------------------------------------------------+
+ *	+ CPU Stack
  *	+------------------------------------------------------------------------------+
  *
  *
@@ -106,6 +108,17 @@ main:
 	push YH
 	push XL
 	push XH
+
+	//now clear the registers
+	clr TEMP0
+	clr TEMP1
+	clr TEMP2
+	clr TEMP3
+	clr TEMP4
+	clr YL
+	clr YH
+	clr XL
+	clr XH
 .endm
 
 /**
