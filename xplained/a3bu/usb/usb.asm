@@ -210,6 +210,34 @@ main:
 .endm
 
 /****************************************************************************************
+ * USB Request/Descriptor Constants
+ ****************************************************************************************/
+
+.equ DEVICE_MASK_REQUEST_GET_STATUS = 0b00000000
+.equ DEVICE_MASK_REQUEST_CLEAR_FEATURE = 0b00000001
+.equ DEVICE_MASK_REQUEST_SET_FEATURE = 0b00000011
+.equ DEVICE_MASK_REQUEST_SET_ADDRESS = 0b00000101
+.equ DEVICE_MASK_REQUEST_GET_DESCRIPTOR = 0b00000110
+.equ DEVICE_MASK_REQUEST_SET_DESCRIPTOR = 0b00000111
+.equ DEVICE_MASK_REQUEST_GET_CONFIGURATION = 0b00001000
+.equ DEVICE_MASK_REQUEST_SET_CONFIGURATION = 0b00001001
+
+.equ DEVICE_DESCRIPTOR_LENGTH = 0x12							; 18 bytes long
+.equ DEVICE_DESCRIPTOR_TYPE = 0x01								; device descriptor
+.equ DEVICE_DESCRIPTOR_BCD_USB = 0x0200							; support for USB 2.0 
+.equ DEVICE_DESCRIPTOR_DEVICE_CLASS = 0x02						; pretend we're (Communication Device Class) CDC based
+.equ DEVICE_DESCRIPTOR_DEVICE_SUB_CLASS = 0x00 
+.equ DEVICE_DESCRIPTOR_DEVICE_PROTOCOL = 0x00
+.equ DEVICE_DESCRIPTOR_MAX_PACKET_SIZE = 0x08
+.equ DEVICE_DESCRIPTOR_ID_VENDOR = 0x0925						
+.equ DEVICE_DESCRIPTOR_ID_PRODUCT = 0x9060
+.equ DEVICE_DESCRIPTOR_BCD_DEVICE = 0x0100						; our product version is set at 1.0
+.equ DEVICE_DESCRIPTOR_MANUFACTURER = 0x00
+.equ DEVICE_DESCRIPTOR_PRODUCT = 0x00
+.equ DEVICE_DESCRIPTOR_SERIAL_NUMBER = 0x00
+.equ DEVICE_DESCRIPTOR_NUM_CONFIGURATIONS = 0x01 
+
+/****************************************************************************************
  * Clock Functions
  ****************************************************************************************/
 
@@ -499,6 +527,7 @@ handle_usb_io_request:
 process_usb_setup_request:
 	ctxswi
 
+	//fetch the data pointer for the endpoint pipe
 	popa TEMP0															; pop the endpoint number from the app stack
 	coep TEMP0															; calculate and store endpoint output pipe address in Y
 	movw X, Y
@@ -512,7 +541,9 @@ process_usb_setup_request:
 	movw Y, TEMP2:TEMP1													; copy endpoint output pipe data pointer address in to Y
 	movw X, Y															; copy Y into X (backup address so we can free TEMP1 and TEMP2 for other usage) 
 
+
 	//decode the request type here and the invoke the associated handler
+	ld TEMP0, Y															; load byte from data *(ptr + 0)
 
 	ctxswib
 	ret
