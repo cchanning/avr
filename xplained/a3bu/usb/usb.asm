@@ -94,7 +94,7 @@ main:
 
 /**
  * Saves the application registers to the CPU stack. This macro should be called at the start of a function
- * to avoid tromping on memory used by other parent functions etc. It must be restored using the rstr macro.
+ * to avoid tromping on memory used by other parent functions etc. It must be restored using the ctxswib macro.
  */
 .macro ctxswi
 	push TEMP
