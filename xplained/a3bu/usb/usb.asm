@@ -47,26 +47,26 @@
 
 reset:
 	ldi TEMP0, low(RAMEND)
-	sts CPU_SPL, TEMP0								; configure low byte of CPU stack pointer
+	sts CPU_SPL, TEMP0										; configure low byte of CPU stack pointer
 	ldi TEMP0, high(RAMEND)
-	sts CPU_SPH, TEMP0								; configure high byte of CPU stack pointer
-	ldi ZL, low(APPLICATION_STACK_START)			; configure low byte of application stack pointer
-	ldi ZH, high(APPLICATION_STACK_START)			; configure high byte of application stack pointer
-	sbiw Z, 1										; cause the SP to be one before the stack start address, this is required as a pusha will first increment Z. In the first usage scenario it will make sure the data is placed at the stack start address.	
+	sts CPU_SPH, TEMP0										; configure high byte of CPU stack pointer
+	ldi ZL, low(APPLICATION_STACK_START)					; configure low byte of application stack pointer
+	ldi ZH, high(APPLICATION_STACK_START)					; configure high byte of application stack pointer
+	sbiw Z, 1												; cause the SP to be one before the stack start address, this is required as a pusha will first increment Z. In the first usage scenario it will make sure the data is placed at the stack start address.	
 	ldi TEMP0, low(APPLICATION_HEAP_START + 2)		
-	sts APPLICATION_HEAP_START, TEMP0				; store LSB of heap free byte pointer
+	sts APPLICATION_HEAP_START, TEMP0						; store LSB of heap free byte pointer
 	ldi TEMP0, high(APPLICATION_HEAP_START + 2)		
-	sts APPLICATION_HEAP_START + 1, TEMP0			; store MSB of heap free byte pointer
+	sts APPLICATION_HEAP_START + 1, TEMP0					; store MSB of heap free byte pointer
 
 	call configure_system_clock
 	call configure_usb
 	call enable_interrupts
 	call enable_usb
 
-	jmp main									; jump to the main program loop
+	jmp main												; jump to the main program loop
 
 main:
-	jmp main									; keep the CPU busy forever
+	jmp main												; keep the CPU busy forever
 
 /*********************************************************************************************
  * Application Memory
@@ -190,11 +190,11 @@ main:
  * Parameter 0 - the endpoint number ranging from 0 - n
  */
 .macro coep
-	ldi YL, low(ENDPOINT_START)							; configure low byte of pointer to the first endpoint
+	ldi YL, low(ENDPOINT_START)								; configure low byte of pointer to the first endpoint
 	ldi YH, high(ENDPOINT_START)							; configure high byte of pointer to the first endpoint
 	mov R19, @0
 	ldi R18, 16
-	mul R19, R18									; MUL saves result in R1:R0 where R1 == HIGH and R0 == low
+	mul R19, R18											; MUL saves result in R1:R0 where R1 == HIGH and R0 == low
 	add YL, R0
 	adc YH, R1
 .endm
@@ -205,8 +205,8 @@ main:
  * Parameter 0 - the endpoint number ranging from 0 - n
  */
 .macro ciep
-	coep @0									; configure Y to point at the output portion of the endpoint
-	adiw Y, 8									; the input portion of the endpoint is always 8 bytes from the start of the output portion
+	coep @0													; configure Y to point at the output portion of the endpoint
+	adiw Y, 8												; the input portion of the endpoint is always 8 bytes from the start of the output portion
 .endm
 
 /****************************************************************************************
@@ -220,12 +220,12 @@ main:
 configure_system_clock:
 	ctxswi
 	
-	call configure_32mhz_int_osc							; make sure the 32Mhz internal oscillator is configured and is stable for use
-	call configure_pll								; configure the PLL
+	call configure_32mhz_int_osc								; make sure the 32Mhz internal oscillator is configured and is stable for use
+	call configure_pll											; configure the PLL
 	ldi TEMP0, 0b00001100
-	sts CLK_PSCTRL, TEMP0								; set prescaler A to div by 4, disable prescalers C/B (CPU etc will run at 12Mhz)
+	sts CLK_PSCTRL, TEMP0										; set prescaler A to div by 4, disable prescalers C/B (CPU etc will run at 12Mhz)
 	ldi TEMP0, 0b00000100
-	sts CLK_CTRL, TEMP0								; set the clock source as PLL
+	sts CLK_CTRL, TEMP0											; set the clock source as PLL
 	
 	ctxswib
 	ret
@@ -236,17 +236,17 @@ configure_system_clock:
 configure_32mhz_int_osc:
 	ctxswi
 	
-	lds TEMP0, OSC_CTRL								; load up the existing oscillator configuration (by default the 2mhz oscillator should be enabled)
+	lds TEMP0, OSC_CTRL											; load up the existing oscillator configuration (by default the 2mhz oscillator should be enabled)
 	ldi TEMP1, 0b00000010
-	or TEMP0, TEMP1									; this will make sure we keep any previously enabled oscillators alive :)
-	sts OSC_CTRL, TEMP0								; enable the 32mhz internal oscillator
+	or TEMP0, TEMP1												; this will make sure we keep any previously enabled oscillators alive :)
+	sts OSC_CTRL, TEMP0											; enable the 32mhz internal oscillator
 
-	IOSC_NOT_READY:									; loop until the hardware has told us the 32mhz internal oscillator is stable
+	IOSC_NOT_READY:												; loop until the hardware has told us the 32mhz internal oscillator is stable
 		ldi TEMP0, 0b00000010
 		mov TEMP1, TEMP0
 		lds TEMP2, OSC_STATUS
 		and TEMP1, TEMP2
-		cpse TEMP0, TEMP1								; when TEMP0 == TEMP1 the next instruction will be skipped, causing "ret" to be the next instruction to be executed
+		cpse TEMP0, TEMP1										; when TEMP0 == TEMP1 the next instruction will be skipped, causing "ret" to be the next instruction to be executed
 		jmp IOSC_NOT_READY
 	
 	ctxswib
@@ -262,18 +262,18 @@ configure_pll:
 	ctxswi
 	
 	ldi TEMP0, 0b10000110
-	sts OSC_PLLCTRL, TEMP0								; configure the PLL input clock source as the 32Mhz internal oscillator (scaled down automatically to 8mhz by hardware), set the PLL frequency multiplication factor to 6 to scale the PLL output up to 48mhz
-	lds	TEMP1, OSC_CTRL								; copy the current oscillator configuration (we dont' want to accidentally turn off the 32mhz internal osscillator etc!)
-	ldi TEMP2, 0b00010000								; load the bitmask that will enable the PLL
+	sts OSC_PLLCTRL, TEMP0										; configure the PLL input clock source as the 32Mhz internal oscillator (scaled down automatically to 8mhz by hardware), set the PLL frequency multiplication factor to 6 to scale the PLL output up to 48mhz
+	lds	TEMP1, OSC_CTRL											; copy the current oscillator configuration (we dont' want to accidentally turn off the 32mhz internal osscillator etc!)
+	ldi TEMP2, 0b00010000										; load the bitmask that will enable the PLL
 	or TEMP1, TEMP2
-	sts OSC_CTRL, TEMP1								; enable the PLL (whilst preserving any previously enabled osscillators)
+	sts OSC_CTRL, TEMP1											; enable the PLL (whilst preserving any previously enabled osscillators)
 	
-	PLL_NOT_READY:									; loop until the hardware has told us the PLL is stable
+	PLL_NOT_READY:												; loop until the hardware has told us the PLL is stable
 		ldi TEMP1, 0b00010000
 		mov TEMP2, TEMP1
 		lds TEMP3, OSC_STATUS
 		and TEMP2, TEMP3
-		cpse TEMP1, TEMP2							; when TEMP1 == TEMP2 the next instruction will be skipped, causing "ret" to be the next instruction to be executed
+		cpse TEMP1, TEMP2										; when TEMP1 == TEMP2 the next instruction will be skipped, causing "ret" to be the next instruction to be executed
 		jmp PLL_NOT_READY
 	
 	ctxswib
@@ -286,7 +286,7 @@ configure_usb_clock:
 	ctxswi
 	
 	ldi TEMP0, 0b00000001
-	sts CLK_USBCTRL, TEMP0								; set the PLL as the USB clock source, enable the USB clock source (start feeding the USB module clock signals)	
+	sts CLK_USBCTRL, TEMP0										; set the PLL as the USB clock source, enable the USB clock source (start feeding the USB module clock signals)	
 	
 	ctxswib
 	ret
@@ -299,12 +299,12 @@ enable_interrupts:
 	ctxswi
 
 	ldi TEMP0, 0b00000100
-	sts PMIC_CTRL, TEMP0								; enable high level in PMIC
+	sts PMIC_CTRL, TEMP0										; enable high level in PMIC
 	ldi TEMP0, 0b01000011
-	sts USB_INTCTRLA, TEMP0								; enable txn and bus (BUSEVIE) interrupts to fire for USB
+	sts USB_INTCTRLA, TEMP0										; enable txn and bus (BUSEVIE) interrupts to fire for USB
 	ldi TEMP0, 0b00000001								
-	sts USB_INTCTRLB, TEMP0								; enable interrupts to fire when SETUP transactions complete on USB
-	sei										; enable global interrupts
+	sts USB_INTCTRLB, TEMP0										; enable interrupts to fire when SETUP transactions complete on USB
+	sei															; enable global interrupts
 
 	ctxswib
 	ret
@@ -312,10 +312,10 @@ enable_interrupts:
 enable_usb:
 	ctxswi
 
-	ldi TEMP0, 0b11010000								; enables the following usb port, full speed, frame number tracking
+	ldi TEMP0, 0b11010000										; enables the following usb port, full speed, frame number tracking
 	ldi TEMP1, ENDPOINT_COUNT
-	or TEMP0, TEMP1									; enable the required number of endpoints
-	sts USB_CTRLA, TEMP0								; activate the USB port with the configuration
+	or TEMP0, TEMP1												; enable the required number of endpoints
+	sts USB_CTRLA, TEMP0										; activate the USB port with the configuration
 
 	ctxswib
 	ret
@@ -333,7 +333,7 @@ configure_usb:
 	ctxswi
 
 	ldi TEMP0, 0x00
-	sts USB_ADDR, TEMP0								; reset device address
+	sts USB_ADDR, TEMP0											; reset device address
 	call configure_usb_clock
 	call configure_usb_endpoints
 
@@ -348,10 +348,10 @@ configure_usb_endpoints:
 	ctxswi
 
 	ldi TEMP0, low(ENDPOINT_CFG_TBL_START)
-	sts USB_EPPTR, TEMP0								; configure low byte of endpoint config table pointer
+	sts USB_EPPTR, TEMP0										; configure low byte of endpoint config table pointer
 	ldi TEMP0, high(ENDPOINT_CFG_TBL_START)
-	sts USB_EPPTR + 1, TEMP0							; configure high byte of endpoint config table pointer
-	ldi TEMP0, 0									; configure endpoint counter
+	sts USB_EPPTR + 1, TEMP0									; configure high byte of endpoint config table pointer
+	ldi TEMP0, 0												; configure endpoint counter
 
 	//configure endpoint 0 out pipe
 	coep TEMP0
@@ -394,8 +394,8 @@ configure_usb_endpoints:
 configure_usb_endpoint_pipe:
 	ctxswi
 
-	popa TEMP1										; pop the low byte of the endpoint address from the application stack
-	popa TEMP2										; pop the high byte of the endpoint address from the application stack
+	popa TEMP1													; pop the low byte of the endpoint address from the application stack
+	popa TEMP2													; pop the high byte of the endpoint address from the application stack
 
 	movw Y, TEMP2:TEMP1
 	clr TEMP3							
@@ -403,8 +403,8 @@ configure_usb_endpoint_pipe:
 	st Y, TEMP3
 	movw Y, TEMP2:TEMP1				
 	adiw Y, ENDPOINT_PIPE_OFFSET_CTRL
-	popa TEMP3										; pop the type of endpoint to use from the application stack
-	ori TEMP3, ENDPOINT_PIPE_MASK_BUFFER_SIZE_32	; set the buffer size for the endpoint
+	popa TEMP3													; pop the type of endpoint to use from the application stack
+	ori TEMP3, ENDPOINT_PIPE_MASK_BUFFER_SIZE_32				; set the buffer size for the endpoint
 	st Y, TEMP3
 	clr TEMP3
 	movw Y, TEMP2:TEMP1						
@@ -413,14 +413,14 @@ configure_usb_endpoint_pipe:
 	movw Y, TEMP2:TEMP1					
 	adiw Y, ENDPOINT_PIPE_OFFSET_CNTH
 	st Y, TEMP3
-	lhfbp X											; load the heap free byte pointer address into X (XH:XL)
+	lhfbp X														; load the heap free byte pointer address into X (XH:XL)
 	movw Y, TEMP2:TEMP1							
 	adiw Y, ENDPOINT_PIPE_OFFSET_DATAPTRL
-	st Y, XL										; store the low byte of the HFBPtr address
+	st Y, XL													; store the low byte of the HFBPtr address
 	movw Y, TEMP2:TEMP1					
 	adiw Y, ENDPOINT_PIPE_OFFSET_DATAPTRH
-	st Y, XH										; store the high byte of the HFBPtr address
-	ahfbp ENDPOINT_PIPE_BUFFER_SIZE						; now increment the HFBPtr by 32 to point at the next free byte
+	st Y, XH													; store the high byte of the HFBPtr address
+	ahfbp ENDPOINT_PIPE_BUFFER_SIZE								; now increment the HFBPtr by 32 to point at the next free byte
 	movw Y, TEMP2:TEMP1						
 	adiw Y, ENDPOINT_PIPE_OFFSET_AUXDATAL
 	st Y, TEMP3
@@ -443,7 +443,7 @@ clear_usb_interrupt_flags_a:
 handle_usb_setup_request:
 	ctxswi
 
-	ldi TEMP0, 0									; initialize the endpoint counter
+	ldi TEMP0, 0												; initialize the endpoint counter
 
 	//loop through all output type endpoints (SETUP packets are always sent from host to client, making it an output transfer type)
 	HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP:
@@ -471,7 +471,7 @@ handle_usb_setup_request:
 		call process_usb_setup_request
 
 		//now check cleanup status register for endpoint
-		clr TEMP1										; the doc says write 1's to clear the endpoint status but I think this is a bug?
+		clr TEMP1												; the doc says write 1's to clear the endpoint status but I think this is a bug?
 		movw Y, X
 		adiw Y, ENDPOINT_PIPE_OFFSET_STATUS
 		st Y, TEMP1 
