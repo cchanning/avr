@@ -47,26 +47,26 @@
 
 reset:
 	ldi TEMP0, low(RAMEND)
-	sts CPU_SPL, TEMP0										; configure low byte of CPU stack pointer
+	sts CPU_SPL, TEMP0											; configure low byte of CPU stack pointer
 	ldi TEMP0, high(RAMEND)
-	sts CPU_SPH, TEMP0										; configure high byte of CPU stack pointer
-	ldi ZL, low(APPLICATION_STACK_START)					; configure low byte of application stack pointer
-	ldi ZH, high(APPLICATION_STACK_START)					; configure high byte of application stack pointer
-	sbiw Z, 1												; cause the SP to be one before the stack start address, this is required as a pusha will first increment Z. In the first usage scenario it will make sure the data is placed at the stack start address.	
+	sts CPU_SPH, TEMP0											; configure high byte of CPU stack pointer
+	ldi ZL, low(APPLICATION_STACK_START)						; configure low byte of application stack pointer
+	ldi ZH, high(APPLICATION_STACK_START)						; configure high byte of application stack pointer
+	sbiw Z, 1													; cause the SP to be one before the stack start address, this is required as a pusha will first increment Z. In the first usage scenario it will make sure the data is placed at the stack start address.	
 	ldi TEMP0, low(APPLICATION_HEAP_START + 2)		
-	sts APPLICATION_HEAP_START, TEMP0						; store LSB of heap free byte pointer
+	sts APPLICATION_HEAP_START, TEMP0							; store LSB of heap free byte pointer
 	ldi TEMP0, high(APPLICATION_HEAP_START + 2)		
-	sts APPLICATION_HEAP_START + 1, TEMP0					; store MSB of heap free byte pointer
+	sts APPLICATION_HEAP_START + 1, TEMP0						; store MSB of heap free byte pointer
 
 	call configure_system_clock
 	call configure_usb
 	call enable_interrupts
 	call enable_usb
 
-	jmp main												; jump to the main program loop
+	jmp main													; jump to the main program loop
 
 main:
-	jmp main												; keep the CPU busy forever
+	jmp main													; keep the CPU busy forever
 
 /*********************************************************************************************
  * Application Memory
@@ -190,11 +190,11 @@ main:
  * Parameter 0 - the endpoint number ranging from 0 - n
  */
 .macro coep
-	ldi YL, low(ENDPOINT_START)								; configure low byte of pointer to the first endpoint
-	ldi YH, high(ENDPOINT_START)							; configure high byte of pointer to the first endpoint
+	ldi YL, low(ENDPOINT_START)									; configure low byte of pointer to the first endpoint
+	ldi YH, high(ENDPOINT_START)								; configure high byte of pointer to the first endpoint
 	mov R19, @0
 	ldi R18, 16
-	mul R19, R18											; MUL saves result in R1:R0 where R1 == HIGH and R0 == low
+	mul R19, R18												; MUL saves result in R1:R0 where R1 == HIGH and R0 == low
 	add YL, R0
 	adc YH, R1
 .endm
@@ -205,8 +205,8 @@ main:
  * Parameter 0 - the endpoint number ranging from 0 - n
  */
 .macro ciep
-	coep @0													; configure Y to point at the output portion of the endpoint
-	adiw Y, 8												; the input portion of the endpoint is always 8 bytes from the start of the output portion
+	coep @0														; configure Y to point at the output portion of the endpoint
+	adiw Y, 8													; the input portion of the endpoint is always 8 bytes from the start of the output portion
 .endm
 
 /****************************************************************************************
