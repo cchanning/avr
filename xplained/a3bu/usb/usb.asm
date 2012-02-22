@@ -185,7 +185,7 @@ main:
 .equ ENDPOINT_PIPE_BUFFER_SIZE = 32
 
 /*
- * This macro will calculate the pointer to the start of the output portion of endpoint and place the pointer in Y
+ * This macro will calculate and store in register Y the start address of the output pipe for the supplied endpoint.
  *
  * Parameter 0 - the endpoint number ranging from 0 - n
  */
@@ -200,7 +200,7 @@ main:
 .endm
 
 /*
- * This macro will calculate the pointer to the start of the input portion of the endpoint and place the pointer in Y
+ * This macro will calculate and store in register Y the start address of the input pipe for the supplied endpoint.
  *
  * Parameter 0 - the endpoint number ranging from 0 - n
  */
