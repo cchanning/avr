@@ -155,7 +155,7 @@ main:
 	lhfbp R17:R16
 	ldi R18, @0
 	add R16, R18
-	eor R18, R18
+	clr R18
 	adc R17, R18
 	sts APPLICATION_HEAP_START, R16
 	sts APPLICATION_HEAP_START + 1, R17
@@ -398,7 +398,7 @@ configure_usb_endpoint_pipe:
 	popa TEMP2										; pop the high byte of the endpoint address from the application stack
 
 	movw Y, TEMP2:TEMP1
-	eor TEMP3, TEMP3							
+	clr TEMP3							
 	adiw Y, ENDPOINT_PIPE_OFFSET_STATUS
 	st Y, TEMP3
 	movw Y, TEMP2:TEMP1				
@@ -406,7 +406,7 @@ configure_usb_endpoint_pipe:
 	popa TEMP3										; pop the type of endpoint to use from the application stack
 	ori TEMP3, ENDPOINT_PIPE_MASK_BUFFER_SIZE_32	; set the buffer size for the endpoint
 	st Y, TEMP3
-	eor TEMP3, TEMP3
+	clr TEMP3
 	movw Y, TEMP2:TEMP1						
 	adiw Y, ENDPOINT_PIPE_OFFSET_CNTL
 	st Y, TEMP3
@@ -471,7 +471,7 @@ handle_usb_setup_request:
 		call process_usb_setup_request
 
 		//now check cleanup status register for endpoint
-		eor TEMP1, TEMP1										; the doc says write 1's to clear the endpoint status but I think this is a bug?
+		clr TEMP1										; the doc says write 1's to clear the endpoint status but I think this is a bug?
 		movw Y, X
 		adiw Y, ENDPOINT_PIPE_OFFSET_STATUS
 		st Y, TEMP1 
