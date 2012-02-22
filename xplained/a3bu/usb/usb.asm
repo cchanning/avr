@@ -92,6 +92,38 @@ main:
 	sbiw Z, 1
 .endm
 
+/**
+ * Saves the application registers to the CPU stack. This macro should be called at the start of a function
+ * to avoid tromping on memory used by other parent functions etc. It must be restored using the rstr macro.
+ */
+.macro ctxswi
+	push TEMP
+	push TEMP1
+	push TEMP2
+	push TEMP3
+	push TEMP4
+	push YL
+	push YH
+	push XL
+	push XH
+.endm
+
+/**
+ * Restores/switches back the persisted application registers from the CPU stack, this macro should only be used in pstr was
+ * used initially.
+ */
+.macro ctxswib
+	pop XH
+	pop XL
+	pop YH
+	pop YL
+	pop TEMP4
+	pop TEMP3
+	pop TEMP2
+	pop TEMP1
+	pop TEMP
+.endm
+
 .equ APPLICATION_HEAP_START = APPLICATION_STACK_START + APPLICATION_STACK_SIZE
 .equ APPLICATION_HEAP_SIZE = 1024
 
@@ -174,18 +206,24 @@ main:
  * be configured as the system clock source. Prescaler A will be configured to reduce the output from the PLL to 3Mhz rather than 48Mhz.
  */
 configure_system_clock:
+	ctxswi
+	
 	call configure_32mhz_int_osc							; make sure the 32Mhz internal oscillator is configured and is stable for use
 	call configure_pll								; configure the PLL
 	ldi TEMP, 0b00001100
 	sts CLK_PSCTRL, TEMP								; set prescaler A to div by 4, disable prescalers C/B (CPU etc will run at 12Mhz)
 	ldi TEMP, 0b00000100
 	sts CLK_CTRL, TEMP								; set the clock source as PLL
+	
+	ctxswib
 	ret
 
 /*
  * Switch on the 32mhz internal oscillator and wait for it to become stable before returning.
  */
 configure_32mhz_int_osc:
+	ctxswi
+	
 	lds TEMP1, OSC_CTRL								; load up the existing oscillator configuration (by default the 2mhz oscillator should be enabled)
 	ldi TEMP2, 0b00000010
 	or TEMP1, TEMP2									; this will make sure we keep any previously enabled oscillators alive :)
@@ -198,6 +236,8 @@ configure_32mhz_int_osc:
 		and TEMP2, TEMP3
 		cpse TEMP1, TEMP2								; when TEMP1 == TEMP2 the next instruction will be skipped, causing "ret" to be the next instruction to be executed
 		jmp IOSC_NOT_READY
+	
+	ctxswib
 	ret
 
  /**
@@ -207,6 +247,8 @@ configure_32mhz_int_osc:
   * function.
   */
 configure_pll:
+	ctxswi
+	
 	ldi TEMP, 0b10000110
 	sts OSC_PLLCTRL, TEMP								; configure the PLL input clock source as the 32Mhz internal oscillator (scaled down automatically to 8mhz by hardware), set the PLL frequency multiplication factor to 6 to scale the PLL output up to 48mhz
 	lds	TEMP1, OSC_CTRL								; copy the current oscillator configuration (we dont' want to accidentally turn off the 32mhz internal osscillator etc!)
@@ -221,14 +263,20 @@ configure_pll:
 		and TEMP2, TEMP3
 		cpse TEMP1, TEMP2							; when TEMP1 == TEMP2 the next instruction will be skipped, causing "ret" to be the next instruction to be executed
 		jmp PLL_NOT_READY
+	
+	ctxswib
 	ret
 
 /*
  * Enable the USB clock source as the PLL, note that the PLL must be configured and running before calling this function
  */
 configure_usb_clock:
+	ctxswi
+	
 	ldi TEMP, 0b00000001
 	sts CLK_USBCTRL, TEMP								; set the PLL as the USB clock source, enable the USB clock source (start feeding the USB module clock signals)	
+	
+	ctxswib
 	ret
 
 /****************************************************************************************
@@ -236,6 +284,8 @@ configure_usb_clock:
  ****************************************************************************************/
 
 enable_interrupts:
+	ctxswi
+
 	ldi TEMP, 0b00000100
 	sts PMIC_CTRL, TEMP								; enable high level in PMIC
 	ldi TEMP, 0b01000011
@@ -243,25 +293,39 @@ enable_interrupts:
 	ldi TEMP, 0b00000001								
 	sts USB_INTCTRLB, TEMP								; enable interrupts to fire when SETUP transactions complete on USB
 	sei										; enable global interrupts
+
+	ctxswib
 	ret
 
 enable_usb:
+	ctxswi
+
 	ldi TEMP1, 0b11010000								; enables the following usb port, full speed, frame number tracking
 	ldi TEMP2, ENDPOINT_COUNT
 	or TEMP1, TEMP2									; enable the required number of endpoints
 	sts USB_CTRLA, TEMP1								; activate the USB port with the configuration
+
+	ctxswib
 	ret
 
 disable_usb:
+	ctxswi
+
 	ldi TEMP, 0x00
 	sts USB_CTRLA, TEMP
+
+	ctxswib
 	ret
 
 configure_usb:
+	ctxswi
+
 	ldi TEMP, 0x00
 	sts USB_ADDR, TEMP								; reset device address
 	call configure_usb_clock
 	call configure_usb_endpoints
+
+	ctxswib
 	ret
 
 /****************************************************************************************
@@ -269,6 +333,8 @@ configure_usb:
  ****************************************************************************************/
 
 configure_usb_endpoints:
+	ctxswi
+
 	ldi TEMP, low(ENDPOINT_CFG_TBL_START)
 	sts USB_EPPTR, TEMP								; configure low byte of endpoint config table pointer
 	ldi TEMP, high(ENDPOINT_CFG_TBL_START)
@@ -309,9 +375,13 @@ configure_usb_endpoints:
 		ldi TEMP2, ENDPOINT_COUNT
 		cpse TEMP, TEMP2
 		jmp ENDPOINT_CONFIG_LOOP
+
+	ctxswib
 	ret
 
 configure_usb_endpoint_pipe:
+	ctxswi
+
 	popa TEMP1										; pop the low byte of the endpoint address from the application stack
 	popa TEMP2										; pop the high byte of the endpoint address from the application stack
 
@@ -345,14 +415,22 @@ configure_usb_endpoint_pipe:
 	movw Y, TEMP2:TEMP1	
 	adiw Y, ENDPOINT_OFFSET_AUXDATAH
 	st Y, TEMP3
+
+	ctxswib
 	ret
 
 clear_usb_interrupt_flags_a:
+	ctxswi
+
 	ldi TEMP, 0b11111111
 	sts USB_INTFLAGSACLR, TEMP
+
+	ctxswib
 	ret
 
 handle_usb_setup_request:
+	ctxswi
+
 	ldi TEMP1, 0									; initialize the endpoint counter, exclude 0 as this is handled outside of the loop
 
 	//loop through all output type endpoints (SETUP packets are always sent from host to client, making it an output transfer type)
@@ -392,9 +470,13 @@ handle_usb_setup_request:
 		ldi TEMP2, ENDPOINT_COUNT
 		cpse TEMP1, TEMP2
 		jmp HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP
+
+	ctxswib
 	ret
 
 handle_usb_io_request:
+	ctxswi
+	ctxswib
 	ret
 
 /*
@@ -403,6 +485,8 @@ handle_usb_io_request:
 	@param endpointOutputPipePtr
  */
 process_usb_setup_request:
+	ctxswi
+
 	popa XL
 	popa XH
 
@@ -416,6 +500,7 @@ process_usb_setup_request:
 
 	//decode the request type here and the invoke the associated handler
 
+	ctxswib
 	ret
 
 /****************************************************************************************
@@ -423,7 +508,11 @@ process_usb_setup_request:
  ****************************************************************************************/
 
 isr_device_bus_event:
+	ctxswi
+
 	call clear_usb_interrupt_flags_a
+
+	ctxswib
 	reti
 
 /*
@@ -434,6 +523,7 @@ isr_device_bus_event:
 	The USB interrupt flags will be cleared before returning.
  */
 isr_device_transaction_complete:
+	ctxswi
 
 	lds TEMP, USB_INTFLAGSBSET						; read current interrupt flag to check if this txn was setup or IO
 	andi TEMP, 0b00000001							; bitwise "and" with bitmask to check if the transaction type was SETUP
@@ -442,4 +532,6 @@ isr_device_transaction_complete:
 	sbrs TEMP, 0									; skip next instruction if bit 0 is != 0
 	call handle_usb_io_request
 	call clear_usb_interrupt_flags_a
+
+	ctxswib
 	reti
