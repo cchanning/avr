@@ -508,7 +508,7 @@ process_usb_setup_request:
 	adiw Y, ENDPOINT_PIPE_OFFSET_DATAPTRH
 	ld TEMP2, Y															; temp2:temp1 now holds the data pointer for the endpoint output pipe
 	pusha XH															
-	pusha XL															; backup endpoint output pipe address to the app stack
+	pusha XL															; backup endpoint output pipe address to the app stack so we can restore it later
 	movw Y, TEMP2:TEMP1													; copy endpoint output pipe data pointer address in to Y
 	movw X, Y															; copy Y into X (backup address so we can free TEMP1 and TEMP2 for other usage) 
 
