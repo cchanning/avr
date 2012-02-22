@@ -7,13 +7,13 @@
  *********************************************************************************************
  *
  *
- *	+--------------------------------------+
- *	+ Application Stack (Y register)
- *	+--------------------------------------+
+ *	+------------------------------------------------------------------------------+
+ *	+ Application Stack (Z register)
+ *	+------------------------------------------------------------------------------+
+ *	+ Application Heap (First two bytes are reserved for the free byte pointer)
+ *	+------------------------------------------------------------------------------+
  *	+ Endpoint Configuration Table
- *	+--------------------------------------+
- *	+ Endpoint Data Heap
- *	+--------------------------------------+
+ *	+------------------------------------------------------------------------------+
  *
  *
  *********************************************************************************************/
@@ -24,11 +24,11 @@
  * Register Aliases
  *********************************************************************************************/
 
-.def TEMP = R24
-.def TEMP1 = R23
-.def TEMP2 = R22
-.def TEMP3 = R21
-.def TEMP4 = R20
+.def TEMP = R21
+.def TEMP1 = R22
+.def TEMP2 = R23
+.def TEMP3 = R24
+.def TEMP4 = R25
 
  /*********************************************************************************************
  * Main
@@ -48,9 +48,13 @@ reset:
 	sts CPU_SPL, TEMP								; configure low byte of CPU stack pointer
 	ldi TEMP, high(RAMEND)
 	sts CPU_SPH, TEMP								; configure high byte of CPU stack pointer
-	ldi ZL, low(APPLICATION_STACK_START)						; configure low byte of application stack pointer
-	ldi ZH, high(APPLICATION_STACK_START)						; configure high byte of application stack pointer
-	sbiw Z, 1									; cause the SP to be one before the stack start address, this is required as a pusha will first increment Z. In the first usage scenario it will make sure the data is placed at the stack start address.	
+	ldi ZL, low(APPLICATION_STACK_START)			; configure low byte of application stack pointer
+	ldi ZH, high(APPLICATION_STACK_START)			; configure high byte of application stack pointer
+	sbiw Z, 1										; cause the SP to be one before the stack start address, this is required as a pusha will first increment Z. In the first usage scenario it will make sure the data is placed at the stack start address.	
+	ldi TEMP, low(APPLICATION_HEAP_START + 2)		
+	sts APPLICATION_HEAP_START, TEMP				; store LSB of heap free byte pointer
+	ldi TEMP, high(APPLICATION_HEAP_START + 2)		
+	sts APPLICATION_HEAP_START + 1, TEMP			; store MSB of heap free byte pointer
 
 	call configure_system_clock
 	call configure_usb
@@ -63,7 +67,7 @@ main:
 	jmp main									; keep the CPU busy forever
 
 /*********************************************************************************************
- * Application Stack
+ * Application Memory
  *********************************************************************************************/
 
 .equ APPLICATION_STACK_START = SRAM_START
@@ -88,12 +92,37 @@ main:
 	sbiw Z, 1
 .endm
 
+.equ APPLICATION_HEAP_START = APPLICATION_STACK_START + APPLICATION_STACK_SIZE
+.equ APPLICATION_HEAP_SIZE = 1024
+
+/**
+ * Loads the heap free byte pointer address into the given register pair
+ */
+.macro lhfbp
+	lds R16, APPLICATION_HEAP_START
+	lds R17, APPLICATION_HEAP_START + 1
+	movw @0, R17:R16
+.endm
+
+/**
+ * Increments the heap free byte pointer by the given number
+ */
+.macro ahfbp
+	lhfbp R17:R16
+	ldi R18, @0
+	add R16, R18
+	eor R18, R18
+	adc R17, R18
+	sts APPLICATION_HEAP_START, R16
+	sts APPLICATION_HEAP_START + 1, R17
+.endm
+
 /*********************************************************************************************
  * USB Endpoint
  *********************************************************************************************/
 
 .equ ENDPOINT_COUNT = 2
-.equ ENDPOINT_CFG_TBL_START = APPLICATION_STACK_START + APPLICATION_STACK_SIZE
+.equ ENDPOINT_CFG_TBL_START = APPLICATION_HEAP_START + APPLICATION_HEAP_SIZE
 .equ ENDPOINT_START = ENDPOINT_CFG_TBL_START //in the future FIFO maybe enabled meaning the ENDPOINT_START is further from the cfg table start
 
 .equ ENDPOINT_OFFSET_STATUS = 0
@@ -105,11 +134,11 @@ main:
 .equ ENDPOINT_OFFSET_AUXDATAL = 6
 .equ ENDPOINT_OFFSET_AUXDATAH = 7
 
-.equ ENDPOINT_MASK_TYPE_CONTROL = 0b01000000
-.equ ENDPOINT_MASK_TYPE_BULK = 0b10000000
+.equ ENDPOINT_MASK_PIPE_TYPE_CONTROL = 0b01000000
+.equ ENDPOINT_MASK_PIPE_TYPE_BULK = 0b10000000
 
 .equ ENDPOINT_BUFFER_SIZE_32_MASK = 0b00000010
-.equ ENDPOINT_BUFFER_SIZE_MASK = ENDPOINT_BUFFER_SIZE_32_MASK
+.equ ENDPOINT_BUFFER_SIZE = 32
 
 /*
  * This macro will calculate the pointer to the start of the output portion of endpoint and place the pointer in Y
@@ -157,7 +186,7 @@ configure_system_clock:
  * Switch on the 32mhz internal oscillator and wait for it to become stable before returning.
  */
 configure_32mhz_int_osc:
-	lds	TEMP1, OSC_CTRL								; load up the existing oscillator configuration (by default the 2mhz oscillator should be enabled)
+	lds TEMP1, OSC_CTRL								; load up the existing oscillator configuration (by default the 2mhz oscillator should be enabled)
 	ldi TEMP2, 0b00000010
 	or TEMP1, TEMP2									; this will make sure we keep any previously enabled oscillators alive :)
 	sts OSC_CTRL, TEMP1								; enable the 32mhz internal oscillator
@@ -244,75 +273,78 @@ configure_usb_endpoints:
 	sts USB_EPPTR, TEMP								; configure low byte of endpoint config table pointer
 	ldi TEMP, high(ENDPOINT_CFG_TBL_START)
 	sts USB_EPPTR + 1, TEMP							; configure high byte of endpoint config table pointer
-	ldi TEMP1, 0									; configure endpoint counter
+	ldi TEMP, 0									; configure endpoint counter
 
 	//configure endpoint 0 out pipe
-	coep TEMP1
-	pushai ENDPOINT_MASK_TYPE_CONTROL
+	coep TEMP
+	pushai ENDPOINT_MASK_PIPE_TYPE_CONTROL
 	pusha YH 
 	pusha YL
 	call configure_usb_endpoint_pipe
 
 	//configure endpoint 0 in pipe
-	ciep TEMP1
-	pushai ENDPOINT_MASK_TYPE_CONTROL
+	ciep TEMP
+	pushai ENDPOINT_MASK_PIPE_TYPE_CONTROL
 	pusha YH 
 	pusha YL
 	call configure_usb_endpoint_pipe
-	inc TEMP1
+	inc TEMP
 
 	ENDPOINT_CONFIG_LOOP: 
 		//configure endpoint n output pipe							
-		coep TEMP1
-		pushai ENDPOINT_MASK_TYPE_BULK
+		coep TEMP
+		pushai ENDPOINT_MASK_PIPE_TYPE_BULK
 		pusha YH 
 		pusha YL
 		call configure_usb_endpoint_pipe
 
 		//configure endpoint n input pipe
-		ciep TEMP1
-		pushai ENDPOINT_MASK_TYPE_BULK
+		ciep TEMP
+		pushai ENDPOINT_MASK_PIPE_TYPE_BULK
 		pusha YH 
 		pusha YL
 		call configure_usb_endpoint_pipe
 
-		inc TEMP1
+		inc TEMP
 		ldi TEMP2, ENDPOINT_COUNT
-		cpse TEMP1, TEMP2
+		cpse TEMP, TEMP2
 		jmp ENDPOINT_CONFIG_LOOP
 	ret
 
 configure_usb_endpoint_pipe:
-	popa XL									; pop the low byte of the endpoint address from the application stack
-	popa XH									; pop the high byte of the endpoint address from the application stack
-	movw Y, X
-	eor TEMP, TEMP							
+	popa TEMP1										; pop the low byte of the endpoint address from the application stack
+	popa TEMP2										; pop the high byte of the endpoint address from the application stack
+
+	movw Y, TEMP2:TEMP1
+	eor TEMP3, TEMP3							
 	adiw Y, ENDPOINT_OFFSET_STATUS
-	st Y, TEMP
-	movw Y, X				
+	st Y, TEMP3
+	movw Y, TEMP2:TEMP1				
 	adiw Y, ENDPOINT_OFFSET_CTRL
-	popa TEMP									; pop the type of endpoint to use from the application stack
-	ori TEMP, ENDPOINT_BUFFER_SIZE_MASK		; set the buffer size for the endpoint
-	st Y, TEMP
-	eor TEMP, TEMP
-	movw Y, X						
+	popa TEMP3										; pop the type of endpoint to use from the application stack
+	ori TEMP3, ENDPOINT_BUFFER_SIZE_32_MASK			; set the buffer size for the endpoint
+	st Y, TEMP3
+	eor TEMP3, TEMP3
+	movw Y, TEMP2:TEMP1						
 	adiw Y, ENDPOINT_OFFSET_CNTL
-	st Y, TEMP
-	movw Y, X					
+	st Y, TEMP3
+	movw Y, TEMP2:TEMP1					
 	adiw Y, ENDPOINT_OFFSET_CNTH
-	st Y, TEMP
-	movw Y, X						
+	st Y, TEMP3
+	lhfbp X											; load the heap free byte pointer address into X (XH:XL)
+	movw Y, TEMP2:TEMP1							
 	adiw Y, ENDPOINT_OFFSET_DATAPTRL
-	st Y, TEMP
-	movw Y, X					
+	st Y, XL										; store the low byte of the HFBPtr address
+	movw Y, TEMP2:TEMP1					
 	adiw Y, ENDPOINT_OFFSET_DATAPTRH
-	st Y, TEMP
-	movw Y, X						
+	st Y, XH										; store the high byte of the HFBPtr address
+	ahfbp ENDPOINT_BUFFER_SIZE						; now increment the HFBPtr by 32 to point at the next free byte
+	movw Y, TEMP2:TEMP1						
 	adiw Y, ENDPOINT_OFFSET_AUXDATAL
-	st Y, TEMP
-	movw Y, X	
+	st Y, TEMP3
+	movw Y, TEMP2:TEMP1	
 	adiw Y, ENDPOINT_OFFSET_AUXDATAH
-	st Y, TEMP
+	st Y, TEMP3
 	ret
 
 clear_usb_interrupt_flags_a:
@@ -330,7 +362,7 @@ handle_usb_setup_request:
 		movw X, Y
 		adiw Y, ENDPOINT_OFFSET_CTRL
 		ld TEMP2, Y
-		ldi TEMP3, ENDPOINT_MASK_TYPE_CONTROL
+		ldi TEMP3, ENDPOINT_MASK_PIPE_TYPE_CONTROL
 		and TEMP2, TEMP3										; bitwise "and" with bitmask to check if the endpoint is actually a "control" type
 		cpse TEMP2, TEMP3										; if the endpoint isn't a control type, continue in the loop. If it is, the jmp instruction is skipped
 		jmp HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP_CONTINUE
