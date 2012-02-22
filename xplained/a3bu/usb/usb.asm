@@ -499,16 +499,18 @@ handle_usb_io_request:
 process_usb_setup_request:
 	ctxswi
 
-	popa TEMP0
-	coep TEMP0
+	popa TEMP0															; pop the endpoint number from the app stack
+	coep TEMP0															; calculate and store endpoint output pipe address in Y
 	movw X, Y
 	adiw Y, ENDPOINT_PIPE_OFFSET_DATAPTRL
-	ld TEMP1, Y
+	ld TEMP1, Y															
 	movw Y, X
 	adiw Y, ENDPOINT_PIPE_OFFSET_DATAPTRH
-	ld TEMP2, Y															; temp2:temp1 now holds the DATAPTR for the endpoint
-	movw TEMP4:TEMP3, X													; backup X as it holds the ptr to the endpoint output pipe
-	movw X, TEMP2:TEMP1													; copy the pipe data ptr into X so we can use it
+	ld TEMP2, Y															; temp2:temp1 now holds the data pointer for the endpoint output pipe
+	pusha XH															
+	pusha XL															; backup endpoint output pipe address to the app stack
+	movw Y, TEMP2:TEMP1													; copy endpoint output pipe data pointer address in to Y
+	movw X, Y															; copy Y into X (backup address so we can free TEMP1 and TEMP2 for other usage) 
 
 	//decode the request type here and the invoke the associated handler
 
