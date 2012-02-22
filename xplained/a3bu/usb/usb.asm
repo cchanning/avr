@@ -8,7 +8,7 @@
  *
  *
  *	+------------------------------------------------------------------------------+
- *	+ Application Stack (maintained by Z register)
+ *	+ Application Stack (maintained by Z register, grows downwards from RAMSTART)
  *	+------------------------------------------------------------------------------+
  *	+ Application Heap (First two bytes are reserved for the free byte pointer)
  *	+------------------------------------------------------------------------------+
