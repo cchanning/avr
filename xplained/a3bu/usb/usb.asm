@@ -210,6 +210,12 @@ main:
 .endm
 
 /****************************************************************************************
+ * USB Bus Event Constants
+ ****************************************************************************************/
+
+ .equ BUS_EVENT_MASK_RESET = 0b00010000
+
+/****************************************************************************************
  * USB Request/Descriptor Constants
  ****************************************************************************************/
 
@@ -229,8 +235,8 @@ main:
 .equ DEVICE_DESCRIPTOR_DEVICE_SUB_CLASS = 0x00 
 .equ DEVICE_DESCRIPTOR_DEVICE_PROTOCOL = 0x00
 .equ DEVICE_DESCRIPTOR_MAX_PACKET_SIZE = 0x08
-.equ DEVICE_DESCRIPTOR_ID_VENDOR = 0x0925						
-.equ DEVICE_DESCRIPTOR_ID_PRODUCT = 0x9060
+.equ DEVICE_DESCRIPTOR_ID_VENDOR = 0x03EB						; pretend we're Atmel for now :)						
+.equ DEVICE_DESCRIPTOR_ID_PRODUCT = 0x2FE2						; set the Amtel product ID to be the A3BU Xplained board
 .equ DEVICE_DESCRIPTOR_BCD_DEVICE = 0x0100						; our product version is set at 1.0
 .equ DEVICE_DESCRIPTOR_MANUFACTURER = 0x00
 .equ DEVICE_DESCRIPTOR_PRODUCT = 0x00
@@ -345,6 +351,9 @@ enable_usb:
 	or TEMP0, TEMP1												; enable the required number of endpoints
 	sts USB_CTRLA, TEMP0										; activate the USB port with the configuration
 
+	ldi TEMP0, 0b00000001										
+	sts USB_CTRLB, TEMP0										; set the attach mode to bind USB module to USB tx/rx lines
+
 	ctxswib
 	ret
 
@@ -422,39 +431,23 @@ configure_usb_endpoints:
 configure_usb_endpoint_pipe:
 	ctxswi
 
-	popa TEMP1													; pop the low byte of the endpoint address from the application stack
-	popa TEMP2													; pop the high byte of the endpoint address from the application stack
+	popa YL														; pop the low byte of the endpoint address from the application stack
+	popa YH														; pop the high byte of the endpoint address from the application stack
 
-	movw Y, TEMP2:TEMP1
-	clr TEMP3							
-	adiw Y, ENDPOINT_PIPE_OFFSET_STATUS
-	st Y, TEMP3
-	movw Y, TEMP2:TEMP1				
-	adiw Y, ENDPOINT_PIPE_OFFSET_CTRL
-	popa TEMP3													; pop the type of endpoint to use from the application stack
-	ori TEMP3, ENDPOINT_PIPE_MASK_BUFFER_SIZE_32				; set the buffer size for the endpoint
-	st Y, TEMP3
-	clr TEMP3
-	movw Y, TEMP2:TEMP1						
-	adiw Y, ENDPOINT_PIPE_OFFSET_CNTL
-	st Y, TEMP3
-	movw Y, TEMP2:TEMP1					
-	adiw Y, ENDPOINT_PIPE_OFFSET_CNTH
-	st Y, TEMP3
+	clr TEMP0							
+	std Y + ENDPOINT_PIPE_OFFSET_STATUS, TEMP0
+	popa TEMP0													; pop the type of endpoint to use from the application stack
+	ori TEMP0, ENDPOINT_PIPE_MASK_BUFFER_SIZE_32				; set the buffer size for the endpoint
+	std Y + ENDPOINT_PIPE_OFFSET_CTRL, TEMP0
+	clr TEMP0
+	std Y + ENDPOINT_PIPE_OFFSET_CNTL, TEMP0
+	std Y + ENDPOINT_PIPE_OFFSET_CNTH, TEMP0
 	lhfbp X														; load the heap free byte pointer address into X (XH:XL)
-	movw Y, TEMP2:TEMP1							
-	adiw Y, ENDPOINT_PIPE_OFFSET_DATAPTRL
-	st Y, XL													; store the low byte of the HFBPtr address
-	movw Y, TEMP2:TEMP1					
-	adiw Y, ENDPOINT_PIPE_OFFSET_DATAPTRH
-	st Y, XH													; store the high byte of the HFBPtr address
-	ahfbp ENDPOINT_PIPE_BUFFER_SIZE								; now increment the HFBPtr by 32 to point at the next free byte
-	movw Y, TEMP2:TEMP1						
-	adiw Y, ENDPOINT_PIPE_OFFSET_AUXDATAL
-	st Y, TEMP3
-	movw Y, TEMP2:TEMP1	
-	adiw Y, ENDPOINT_PIPE_OFFSET_AUXDATAH
-	st Y, TEMP3
+	std Y + ENDPOINT_PIPE_OFFSET_DATAPTRL, XL					; store the low byte of the HFBPtr address
+	std Y + ENDPOINT_PIPE_OFFSET_DATAPTRH, XH					; store the high byte of the HFBPtr address
+	ahfbp ENDPOINT_PIPE_BUFFER_SIZE								; now increment the HFBPtr by 32 to point at the next free byte					
+	std Y + ENDPOINT_PIPE_OFFSET_AUXDATAL, TEMP0
+	std Y + ENDPOINT_PIPE_OFFSET_AUXDATAH, TEMP0
 
 	ctxswib
 	ret
@@ -468,6 +461,15 @@ clear_usb_interrupt_flags_a:
 	ctxswib
 	ret
 
+clear_usb_interrupt_flags_b:
+	ctxswi
+
+	ldi TEMP0, 0b11111111
+	sts USB_INTFLAGSBCLR, TEMP0
+
+	ctxswib
+	ret
+
 handle_usb_setup_request:
 	ctxswi
 
@@ -477,18 +479,14 @@ handle_usb_setup_request:
 	HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP:
 		//check if the endpoint is a control type
 		coep TEMP0
-		movw X, Y
-		adiw Y, ENDPOINT_PIPE_OFFSET_CTRL
-		ld TEMP1, Y
+		ldd TEMP1, Y + ENDPOINT_PIPE_OFFSET_CTRL
 		ldi TEMP2, ENDPOINT_PIPE_MASK_TYPE_CONTROL
 		and TEMP1, TEMP2										; bitwise "and" with bitmask to check if the endpoint is actually a "control" type
 		cpse TEMP1, TEMP2										; if the endpoint isn't a control type, continue in the loop. If it is, the jmp instruction is skipped
 		jmp HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP_CONTINUE
 		
 		//now check if the endpoints status register reflects the setup txn
-		movw Y, X
-		adiw Y, ENDPOINT_PIPE_OFFSET_STATUS
-		ld TEMP1, Y												; load status of EP output pipe into register
+		ldd TEMP1, Y + ENDPOINT_PIPE_OFFSET_STATUS											; load status of EP output pipe into register
 		ldi TEMP2, 0b00010000
 		and TEMP1, TEMP2										; bitwise "and" with bitmask to check if the endpoint is reporting a SETUP txn completing
 		cpse TEMP1, TEMP2										; if the endpoint hasn't had a SETUP txn complete, continue in the loop. If it has, the jmp instruction is skipped
@@ -500,9 +498,7 @@ handle_usb_setup_request:
 
 		//now check cleanup status register for endpoint
 		clr TEMP1												; the doc says write 1's to clear the endpoint status but I think this is a bug?
-		movw Y, X
-		adiw Y, ENDPOINT_PIPE_OFFSET_STATUS
-		st Y, TEMP1 
+		std Y + ENDPOINT_PIPE_OFFSET_STATUS, TEMP1 
 
 		HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP_CONTINUE:
 		inc TEMP0
@@ -530,14 +526,10 @@ process_usb_setup_request:
 	//fetch the data pointer for the endpoint pipe
 	popa TEMP0															; pop the endpoint number from the app stack
 	coep TEMP0															; calculate and store endpoint output pipe address in Y
-	movw X, Y
-	adiw Y, ENDPOINT_PIPE_OFFSET_DATAPTRL
-	ld TEMP1, Y															
-	movw Y, X
-	adiw Y, ENDPOINT_PIPE_OFFSET_DATAPTRH
-	ld TEMP2, Y															; temp2:temp1 now holds the data pointer for the endpoint output pipe
-	pusha XH															
-	pusha XL															; backup endpoint output pipe address to the app stack so we can restore it later
+	ldd TEMP1, Y + ENDPOINT_PIPE_OFFSET_DATAPTRL														
+	ldd TEMP2, Y + ENDPOINT_PIPE_OFFSET_DATAPTRH						; temp2:temp1 now holds the data pointer for the endpoint output pipe
+	pusha YH															
+	pusha YL															; backup endpoint output pipe address to the app stack so we can restore it later
 	movw Y, TEMP2:TEMP1													; copy endpoint output pipe data pointer address in to Y
 	movw X, Y															; copy Y into X (backup address so we can free TEMP1 and TEMP2 for other usage) 
 
@@ -548,6 +540,36 @@ process_usb_setup_request:
 	ctxswib
 	ret
 
+handle_usb_bus_event:
+	ctxswi
+	lds TEMP0, USB_INTFLAGSASET
+
+	//check for reset
+	mov TEMP1, TEMP0
+	andi TEMP1, BUS_EVENT_MASK_RESET
+	cpi TEMP1, BUS_EVENT_MASK_RESET
+	breq HANDLE_USB_BUS_EVENT_RESET
+
+	//finish
+	jmp HANDLE_USB_BUS_EVENT_RETURN
+
+	HANDLE_USB_BUS_EVENT_RESET:
+		call process_usb_bus_event_reset
+		jmp HANDLE_USB_BUS_EVENT_RETURN
+
+	HANDLE_USB_BUS_EVENT_RETURN:
+		ctxswib
+	ret
+
+process_usb_bus_event_reset:
+	ctxswi
+	ldi TEMP0, 0b00000011
+	sts PORTR_DIR, TEMP0
+	ldi TEMP0, 0x00000000
+	sts PORTR_OUT, TEMP0
+	ctxswib
+	ret
+
 /****************************************************************************************
  * USB ISRs
  ****************************************************************************************/
@@ -555,7 +577,9 @@ process_usb_setup_request:
 isr_device_bus_event:
 	ctxswi
 
+	call handle_usb_bus_event
 	call clear_usb_interrupt_flags_a
+	call clear_usb_interrupt_flags_b
 
 	ctxswib
 	reti
@@ -577,6 +601,7 @@ isr_device_transaction_complete:
 	sbrs TEMP0, 0									; skip next instruction if bit 0 is != 0
 	call handle_usb_io_request
 	call clear_usb_interrupt_flags_a
+	call clear_usb_interrupt_flags_b
 
 	ctxswib
 	reti
