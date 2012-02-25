@@ -218,15 +218,23 @@ main:
 /****************************************************************************************
  * USB Request/Descriptor Constants
  ****************************************************************************************/
+ .equ REQUEST_MASK_TYPE_STANDARD = 0b00000000
+ .equ REQUEST_MASK_TYPE_CLASS = 0b00100000
+ .equ REQUEST_MASK_TYPE_VENDOR = 0b01000000
+ .equ REQUEST_MASK_TYPE_RESERVED = 0b01100000
+ .equ REQUEST_MASK_TYPE_RECIPIENT_DEVICE = 0b00000000
+ .equ REQUEST_MASK_TYPE_RECIPIENT_INTERFACE = 0b00000001
+ .equ REQUEST_MASK_TYPE_RECIPIENT_ENDPOINT = 0b00000010
+ .equ REQUEST_MASK_TYPE_RECIPIENT_OTHER = 0b00000011
 
-.equ DEVICE_MASK_REQUEST_GET_STATUS = 0b00000000
-.equ DEVICE_MASK_REQUEST_CLEAR_FEATURE = 0b00000001
-.equ DEVICE_MASK_REQUEST_SET_FEATURE = 0b00000011
-.equ DEVICE_MASK_REQUEST_SET_ADDRESS = 0b00000101
-.equ DEVICE_MASK_REQUEST_GET_DESCRIPTOR = 0b00000110
-.equ DEVICE_MASK_REQUEST_SET_DESCRIPTOR = 0b00000111
-.equ DEVICE_MASK_REQUEST_GET_CONFIGURATION = 0b00001000
-.equ DEVICE_MASK_REQUEST_SET_CONFIGURATION = 0b00001001
+.equ REQUEST_DEVICE_MASK_GET_STATUS = 0b00000000
+.equ REQUEST_DEVICE_MASK_CLEAR_FEATURE = 0b00000001
+.equ REQUEST_DEVICE_MASK_SET_FEATURE = 0b00000011
+.equ REQUEST_DEVICE_MASK_SET_ADDRESS = 0b00000101
+.equ REQUEST_DEVICE_MASK_GET_DESCRIPTOR = 0b00000110
+.equ REQUEST_DEVICE_MASK_SET_DESCRIPTOR = 0b00000111
+.equ REQUEST_DEVICE_MASK_GET_CONFIGURATION = 0b00001000
+.equ REQUEST_DEVICE_MASK_SET_CONFIGURATION = 0b00001001
 
 .equ DEVICE_DESCRIPTOR_LENGTH = 0x12							; 18 bytes long
 .equ DEVICE_DESCRIPTOR_TYPE = 0x01								; device descriptor
@@ -534,10 +542,49 @@ process_usb_setup_request:
 	movw X, Y															; copy Y into X (backup address so we can free TEMP1 and TEMP2 for other usage) 
 
 
-	//decode the request type here and the invoke the associated handler
-	ld TEMP0, Y															; load byte from data *(ptr + 0)
+	//load the request type here and the invoke the associated handler
+	ld TEMP0, Y														; load byte from data buffer *(ptr + 0)
+	
+	//check if we're dealing with standard requests
+	mov TEMP1, TEMP0
+	andi TEMP1, REQUEST_MASK_TYPE_STANDARD
+	breq PROCESS_USB_SETUP_REQUEST_STANDARD
 
-	ctxswib
+	//finish up
+	jmp PROCESS_USB_SETUP_REQUEST_RETURN
+
+	//check what type of standard request it was e.g. device level
+	PROCESS_USB_SETUP_REQUEST_STANDARD:
+		mov TEMP1, TEMP0
+		andi TEMP1, REQUEST_MASK_TYPE_RECIPIENT_DEVICE
+		breq PROCESS_USB_SETUP_REQUEST_STANDARD_DEVICE
+		mov TEMP1, TEMP0
+		andi TEMP1, REQUEST_MASK_TYPE_RECIPIENT_INTERFACE 
+		breq PROCESS_USB_SETUP_REQUEST_STANDARD_INTERFACE
+		mov TEMP1, TEMP0
+		andi TEMP1, REQUEST_MASK_TYPE_RECIPIENT_ENDPOINT 
+		breq PROCESS_USB_SETUP_REQUEST_STANDARD_ENDPOINT
+		mov TEMP1, TEMP0
+		andi TEMP1, REQUEST_MASK_TYPE_RECIPIENT_OTHER 
+		breq PROCESS_USB_SETUP_REQUEST_STANDARD_OTHER
+
+		//if we get here, we don't have any handlers to support this type so skip on
+		jmp PROCESS_USB_SETUP_REQUEST_RETURN
+
+	PROCESS_USB_SETUP_REQUEST_STANDARD_DEVICE:
+		jmp PROCESS_USB_SETUP_REQUEST_RETURN
+
+	PROCESS_USB_SETUP_REQUEST_STANDARD_INTERFACE:
+		jmp PROCESS_USB_SETUP_REQUEST_RETURN
+
+	PROCESS_USB_SETUP_REQUEST_STANDARD_ENDPOINT:
+		jmp PROCESS_USB_SETUP_REQUEST_RETURN
+
+	PROCESS_USB_SETUP_REQUEST_STANDARD_OTHER:
+		jmp PROCESS_USB_SETUP_REQUEST_RETURN
+
+	PROCESS_USB_SETUP_REQUEST_RETURN:
+		ctxswib
 	ret
 
 handle_usb_bus_event:
@@ -563,10 +610,6 @@ handle_usb_bus_event:
 
 process_usb_bus_event_reset:
 	ctxswi
-	ldi TEMP0, 0b00000011
-	sts PORTR_DIR, TEMP0
-	ldi TEMP0, 0x00000000
-	sts PORTR_OUT, TEMP0
 	ctxswib
 	ret
 
@@ -593,6 +636,11 @@ isr_device_bus_event:
  */
 isr_device_transaction_complete:
 	ctxswi
+
+		ldi TEMP0, 0b00000011
+		sts PORTR_DIR, TEMP0
+		ldi TEMP0, 0x00000010
+		sts PORTR_OUT, TEMP0
 
 	lds TEMP0, USB_INTFLAGSBSET						; read current interrupt flag to check if this txn was setup or IO
 	andi TEMP0, 0b00000001							; bitwise "and" with bitmask to check if the transaction type was SETUP
