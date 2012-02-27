@@ -257,7 +257,7 @@ main:
 
 /*
  * By default the system clock will be using the 2Mhz internal oscillator (after hardware reset). This function will cause the PLL to 
- * be configured as the system clock source. Prescaler A will be configured to reduce the output from the PLL to 3Mhz rather than 48Mhz.
+ * be configured as the system clock source. Prescaler A will be configured to reduce the output from the PLL to 12Mhz rather than 48Mhz.
  */
 configure_system_clock:
 	ctxswi
@@ -296,7 +296,7 @@ configure_32mhz_int_osc:
 
  /**
   * Configures the PLL, this requires the 32Mhz internal oscillator to be the reference input, note that the hardware will automatically scale down the input
-  * from the PLL to 8mhz (div 4) before we even get to touch it. The PLL multiplaction factor is set at 6 to scale the required clock frequency up to 48mhz. 
+  * to the PLL to 8mhz (div 4) before we even get to touch it. The PLL multiplaction factor is set at 6 to scale the required clock frequency up to 48mhz. 
   * This will allow the PLL to be used as a clock source for the USB. Note that the 32mhz internal oscillator must be running and stable before calling this 
   * function.
   */
