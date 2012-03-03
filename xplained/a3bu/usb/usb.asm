@@ -392,23 +392,24 @@ calibrate_usb:
 	movw X, Z												; save app stack pointer as LPM needs the 16bit Z register
 
 	ldi TEMP0, NVM_CMD_READ_CALIB_ROW_gc															
-	sts NVM_CMD, TEMP0									; load nvm command register for reading calibration row	
+	sts NVM_CMD, TEMP0										; load nvm command register for reading calibration row	
+
 	ldi TEMP0, PROD_SIGNATURES_START + NVM_PROD_SIGNATURES_USBCAL0_offset
 	clr ZH
-	mov ZL, TEMP0										; set ZL to be the USBCAL0 address
-	lpm TEMP0, Z										; load the USBCAL0 value from NVM into TEMP0
-	sts USB_CAL0, TEMP0									; store USBCAL0 value to USB module CAL0 register
+	mov ZL, TEMP0											; set ZL to be the USBCAL0 address
+	lpm TEMP0, Z											; load the USBCAL0 value from NVM into TEMP0
+	sts USB_CAL0, TEMP0										; store USBCAL0 value to USB module CAL0 register
 	
 	ldi TEMP0, PROD_SIGNATURES_START + NVM_PROD_SIGNATURES_USBCAL1_offset
 	clr ZH
-	mov ZL, TEMP0										; set ZL to be the USBCAL1 address
-	lpm TEMP0, Z										; load the USBCAL1 value from NVM into TEMP0
-	sts USB_CAL1, TEMP0									; store USBCAL1 value to USB module CAL1 registe
+	mov ZL, TEMP0											; set ZL to be the USBCAL1 address
+	lpm TEMP0, Z											; load the USBCAL1 value from NVM into TEMP0
+	sts USB_CAL1, TEMP0										; store USBCAL1 value to USB module CAL1 register
 
 	ldi TEMP0, NVM_CMD_NO_OPERATION_gc
-	sts NVM_CMD, TEMP0									; clear NVM command register
+	sts NVM_CMD, TEMP0										; clear NVM command register
 	
-	movw Z, X											; restore app stack pointer
+	movw Z, X												; restore app stack pointer
 
 	ctxswib
 	ret
