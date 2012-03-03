@@ -170,18 +170,16 @@ configure_heap:
 	//now zero out the heap memory for cleanliness
 	clr TEMP0
 	lhfbp X																; load the free heap byte pointer into X
-	ldi YL, low(APPLICATION_HEAP_SIZE - 2)								; remember we're starting two bytes into the heap
-	ldi YH, high(APPLICATION_HEAP_SIZE - 2)
+	ldi YL, low(APPLICATION_HEAP_START + APPLICATION_HEAP_SIZE)			; load Y with address of last useable heap byte + 1
+	ldi YH, high(APPLICATION_HEAP_START + APPLICATION_HEAP_SIZE)
 
-	//keep zero'ing each byte of the heap until Y == 0 
+	//keep zero'ing each byte of the heap while X < Y 
 	CONFIGURE_HEAP_ZERO_LOOP:
 		st	X, TEMP0
-		adiw X, 1														; increment the heap pointer by 1
-		sbiw Y, 1
-		cpi YL, 0
-		brne CONFIGURE_HEAP_ZERO_LOOP
-		cpi YH, 0
-		brne CONFIGURE_HEAP_ZERO_LOOP
+		adiw X, 1														; increment X by 1
+		cp XL, YL
+		cpc XH, YH
+		brlt CONFIGURE_HEAP_ZERO_LOOP									; if X is still lower then Y keep going
 
 	ctxswib
 	ret
