@@ -53,13 +53,11 @@ reset:
 	ldi ZL, low(APPLICATION_STACK_START)						; configure low byte of application stack pointer
 	ldi ZH, high(APPLICATION_STACK_START)						; configure high byte of application stack pointer
 	sbiw Z, 1													; cause the SP to be one before the stack start address, this is required as a pusha will first increment Z. In the first usage scenario it will make sure the data is placed at the stack start address.	
-	ldi TEMP0, low(APPLICATION_HEAP_START + 2)		
-	sts APPLICATION_HEAP_START, TEMP0							; store LSB of heap free byte pointer
-	ldi TEMP0, high(APPLICATION_HEAP_START + 2)		
-	sts APPLICATION_HEAP_START + 1, TEMP0						; store MSB of heap free byte pointer
 
+	call configure_heap
 	call configure_system_clock
-	call configure_usb
+	call configure_usb_clock
+	call configure_usb_io
 	call enable_interrupts
 	call enable_usb
 
@@ -160,6 +158,33 @@ main:
 	sts APPLICATION_HEAP_START, R16
 	sts APPLICATION_HEAP_START + 1, R17
 .endm
+
+configure_heap:
+	ctxswi
+
+	ldi TEMP0, low(APPLICATION_HEAP_START + 2)		
+	sts APPLICATION_HEAP_START, TEMP0									; store LSB of heap free byte pointer
+	ldi TEMP0, high(APPLICATION_HEAP_START + 2)		
+	sts APPLICATION_HEAP_START + 1, TEMP0								; store MSB of heap free byte pointer
+
+	//now zero out the heap memory for cleanliness
+	clr TEMP0
+	lhfbp X																; load the free heap byte pointer into X
+	ldi YL, low(APPLICATION_HEAP_SIZE - 2)								; remember we're starting two bytes into the heap
+	ldi YH, high(APPLICATION_HEAP_SIZE - 2)
+
+	//keep zero'ing each byte of the heap until Y == 0 
+	CONFIGURE_HEAP_ZERO_LOOP:
+		st	X, TEMP0
+		adiw X, 1														; increment the heap pointer by 1
+		sbiw Y, 1
+		cpi YL, 0
+		brne CONFIGURE_HEAP_ZERO_LOOP
+		cpi YH, 0
+		brne CONFIGURE_HEAP_ZERO_LOOP
+
+	ctxswib
+	ret
 
 /*********************************************************************************************
  * USB Endpoint
@@ -337,6 +362,9 @@ configure_usb_clock:
  * General USB Functions
  ****************************************************************************************/
 
+ /**
+  * Enables interrupts for PMIC, USB and global.
+  */
 enable_interrupts:
 	ctxswi
 
@@ -351,8 +379,13 @@ enable_interrupts:
 	ctxswib
 	ret
 
+/**
+ * Configures the USB module registers with required operating speed, endpoint count. Once configured, the USB module is activated.
+ */
 enable_usb:
 	ctxswi
+
+	call calibrate_usb											; load calibrated USB data from device production row
 
 	ldi TEMP0, 0b11010000										; enables the following usb port, full speed, frame number tracking
 	ldi TEMP1, ENDPOINT_COUNT
@@ -365,27 +398,22 @@ enable_usb:
 	ctxswib
 	ret
 
-disable_usb:
-	ctxswi
-
-	ldi TEMP0, 0x00
-	sts USB_CTRLA, TEMP0
-
-	ctxswib
-	ret
-
-configure_usb:
+/**
+ * Resets USB address and configures USB endpoints
+ */
+configure_usb_io:
 	ctxswi
 
 	ldi TEMP0, 0x00
 	sts USB_ADDR, TEMP0											; reset device address
-	call configure_usb_clock
-	call configure_usb_endpoints
-	call calibrate_usb
+	call configure_usb_endpoints								; reset endpoints
 
 	ctxswib
 	ret
 
+/**
+ * Loads the USB calibration data from the device production row into the USB calibration registers
+ */
 calibrate_usb:
 	ctxswi
 
@@ -639,6 +667,10 @@ handle_usb_bus_event:
 
 process_usb_bus_event_reset:
 	ctxswi
+	
+	call configure_heap
+	call configure_usb_io
+
 	ctxswib
 	ret
 
@@ -648,10 +680,14 @@ process_usb_bus_event_reset:
 
 isr_device_bus_event:
 	ctxswi
+	
+	cli													; prevent further interrupts occuring
 
 	call handle_usb_bus_event
 	call clear_usb_interrupt_flags_a
 	call clear_usb_interrupt_flags_b
+
+	sei													; enable interrupts again
 
 	ctxswib
 	reti
@@ -666,10 +702,12 @@ isr_device_bus_event:
 isr_device_transaction_complete:
 	ctxswi
 
-		ldi TEMP0, 0b00000011
-		sts PORTR_DIR, TEMP0
-		ldi TEMP0, 0x00000010
-		sts PORTR_OUT, TEMP0
+	cli												; prevent further interrupts occurring
+
+	ldi TEMP0, 0b00000011
+	sts PORTR_DIR, TEMP0
+	ldi TEMP0, 0x00000010
+	sts PORTR_OUT, TEMP0
 
 	lds TEMP0, USB_INTFLAGSBSET						; read current interrupt flag to check if this txn was setup or IO
 	andi TEMP0, 0b00000001							; bitwise "and" with bitmask to check if the transaction type was SETUP
@@ -679,6 +717,8 @@ isr_device_transaction_complete:
 	call handle_usb_io_request
 	call clear_usb_interrupt_flags_a
 	call clear_usb_interrupt_flags_b
+
+	sei												; enable interrupts again
 
 	ctxswib
 	reti
