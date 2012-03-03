@@ -402,7 +402,7 @@ enable_usb:
 configure_usb_io:
 	ctxswi
 
-	ldi TEMP0, 0x00
+	clr TEMP0
 	sts USB_ADDR, TEMP0											; reset device address
 	call configure_usb_endpoints								; reset endpoints
 
