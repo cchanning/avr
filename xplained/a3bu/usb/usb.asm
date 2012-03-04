@@ -297,10 +297,13 @@ configure_system_clock:
 	call configure_32mhz_int_osc								; make sure the 32Mhz internal oscillator is configured and is stable for use
 	call configure_pll											; configure the PLL
 	ldi TEMP0, 0b00001100
+	ldi TEMP1, CCP_IOREG_gc
+	sts CPU_CCP, TEMP1											; temporarily turn off change control protection (automatically switched back on after 4 cycles)
 	sts CLK_PSCTRL, TEMP0										; set prescaler A to div by 4, disable prescalers C/B (CPU etc will run at 12Mhz)
 	ldi TEMP0, 0b00000100
+	sts CPU_CCP, TEMP1											; temporarily turn off change control protection (automatically switched back on after 4 cycles)
 	sts CLK_CTRL, TEMP0											; set the clock source as PLL
-	
+
 	ctxswib
 	ret
 
