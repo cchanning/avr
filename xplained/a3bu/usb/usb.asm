@@ -563,17 +563,55 @@ handle_usb_setup_request:
 		jmp HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP_CONTINUE
 		
 		//now check if the endpoints status register reflects the setup txn
-		ldd TEMP1, Y + ENDPOINT_PIPE_OFFSET_STATUS											; load status of EP output pipe into register
+		ldd TEMP1, Y + ENDPOINT_PIPE_OFFSET_STATUS				; load status of EP output pipe into register
 		ldi TEMP2, 0b00010000
 		and TEMP1, TEMP2										; bitwise "and" with bitmask to check if the endpoint is reporting a SETUP txn completing
 		cpse TEMP1, TEMP2										; if the endpoint hasn't had a SETUP txn complete, continue in the loop. If it has, the jmp instruction is skipped
 		jmp HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP_CONTINUE
 
-		//now delegate to the parsing handler to process the request
-		pusha TEMP0
-		call process_usb_setup_request
+		//fetch the data pointer for the endpoint pipe
+		ldd TEMP1, Y + ENDPOINT_PIPE_OFFSET_DATAPTRL														
+		ldd TEMP2, Y + ENDPOINT_PIPE_OFFSET_DATAPTRH			; temp2:temp1 now holds the data pointer for the endpoint output pipe
+		movw X, TEMP2:TEMP1										; copy endpoint output pipe data pointer address in to Y
+		ld TEMP1, X												; load byte from data buffer *(ptr + 0)
+		mov TEMP2, TEMP1
+		andi TEMP2, REQUEST_MASK_TYPE_STANDARD
+		breq HANDLE_USB_SETUP_STANDARD_REQUEST					; jump if we are we dealing with standard requests
+		
+		jmp HANDLE_USB_SETUP_REQUEST_CLEANUP					; if we get here then this wasn't a standard request type
+
+		HANDLE_USB_SETUP_STANDARD_REQUEST:
+			mov TEMP2, TEMP1
+			andi TEMP2, REQUEST_MASK_TYPE_RECIPIENT_DEVICE
+			breq HANDLE_USB_SETUP_STANDARD_DEVICE_REQUEST
+			mov TEMP2, TEMP1
+			andi TEMP2, REQUEST_MASK_TYPE_RECIPIENT_INTERFACE 
+			breq HANDLE_USB_SETUP_STANDARD_INTERFACE_REQUEST
+			mov TEMP2, TEMP1
+			andi TEMP2, REQUEST_MASK_TYPE_RECIPIENT_ENDPOINT 
+			breq HANDLE_USB_SETUP_STANDARD_ENDPOINT_REQUEST
+			mov TEMP2, TEMP1
+			andi TEMP2, REQUEST_MASK_TYPE_RECIPIENT_OTHER 
+			breq HANDLE_USB_SETUP_STANDARD_OTHER_REQUEST
+
+			jmp HANDLE_USB_SETUP_REQUEST_CLEANUP				; if we get here then we don't support the request type
+
+		HANDLE_USB_SETUP_STANDARD_DEVICE_REQUEST:
+			lightson 0x00
+			jmp HANDLE_USB_SETUP_REQUEST_CLEANUP
+
+		HANDLE_USB_SETUP_STANDARD_INTERFACE_REQUEST:
+			jmp HANDLE_USB_SETUP_REQUEST_CLEANUP
+
+		HANDLE_USB_SETUP_STANDARD_ENDPOINT_REQUEST:
+			jmp HANDLE_USB_SETUP_REQUEST_CLEANUP
+
+		HANDLE_USB_SETUP_STANDARD_OTHER_REQUEST:
+			jmp HANDLE_USB_SETUP_REQUEST_CLEANUP
+
 
 		//now check cleanup status register for endpoint
+		HANDLE_USB_SETUP_REQUEST_CLEANUP:
 		clr TEMP1												; the doc says write 1's to clear the endpoint status but I think this is a bug?
 		std Y + ENDPOINT_PIPE_OFFSET_STATUS, TEMP1 
 
@@ -589,71 +627,6 @@ handle_usb_setup_request:
 handle_usb_io_request:
 	ctxswi
 	ctxswib
-	ret
-
-/*
-	This function will parse the SETUP request and invoke the appropriate handler. We need the endpoint number so we have
-	the flexibility of using both the OUT and IN data pipes.
-
-	@param endpoint number
- */
-process_usb_setup_request:
-	ctxswi
-
-	//fetch the data pointer for the endpoint pipe
-	popa TEMP0															; pop the endpoint number from the app stack
-	coep TEMP0															; calculate and store endpoint output pipe address in Y
-	ldd TEMP1, Y + ENDPOINT_PIPE_OFFSET_DATAPTRL														
-	ldd TEMP2, Y + ENDPOINT_PIPE_OFFSET_DATAPTRH						; temp2:temp1 now holds the data pointer for the endpoint output pipe
-	pusha YH															
-	pusha YL															; backup endpoint output pipe address to the app stack so we can restore it later
-	movw Y, TEMP2:TEMP1													; copy endpoint output pipe data pointer address in to Y
-	movw X, Y															; copy Y into X (backup address so we can free TEMP1 and TEMP2 for other usage) 
-
-
-	//load the request type here and the invoke the associated handler
-	ld TEMP0, Y														; load byte from data buffer *(ptr + 0)
-	
-	//check if we're dealing with standard requests
-	mov TEMP1, TEMP0
-	andi TEMP1, REQUEST_MASK_TYPE_STANDARD
-	breq PROCESS_USB_SETUP_REQUEST_STANDARD
-
-	//finish up
-	jmp PROCESS_USB_SETUP_REQUEST_RETURN
-
-	//check what type of standard request it was e.g. device level
-	PROCESS_USB_SETUP_REQUEST_STANDARD:
-		mov TEMP1, TEMP0
-		andi TEMP1, REQUEST_MASK_TYPE_RECIPIENT_DEVICE
-		breq PROCESS_USB_SETUP_REQUEST_STANDARD_DEVICE
-		mov TEMP1, TEMP0
-		andi TEMP1, REQUEST_MASK_TYPE_RECIPIENT_INTERFACE 
-		breq PROCESS_USB_SETUP_REQUEST_STANDARD_INTERFACE
-		mov TEMP1, TEMP0
-		andi TEMP1, REQUEST_MASK_TYPE_RECIPIENT_ENDPOINT 
-		breq PROCESS_USB_SETUP_REQUEST_STANDARD_ENDPOINT
-		mov TEMP1, TEMP0
-		andi TEMP1, REQUEST_MASK_TYPE_RECIPIENT_OTHER 
-		breq PROCESS_USB_SETUP_REQUEST_STANDARD_OTHER
-
-		//if we get here, we don't have any handlers to support this type so skip on
-		jmp PROCESS_USB_SETUP_REQUEST_RETURN
-
-	PROCESS_USB_SETUP_REQUEST_STANDARD_DEVICE:
-		jmp PROCESS_USB_SETUP_REQUEST_RETURN
-
-	PROCESS_USB_SETUP_REQUEST_STANDARD_INTERFACE:
-		jmp PROCESS_USB_SETUP_REQUEST_RETURN
-
-	PROCESS_USB_SETUP_REQUEST_STANDARD_ENDPOINT:
-		jmp PROCESS_USB_SETUP_REQUEST_RETURN
-
-	PROCESS_USB_SETUP_REQUEST_STANDARD_OTHER:
-		jmp PROCESS_USB_SETUP_REQUEST_RETURN
-
-	PROCESS_USB_SETUP_REQUEST_RETURN:
-		ctxswib
 	ret
 
 handle_usb_bus_event:
@@ -694,7 +667,6 @@ isr_device_bus_event:
 	cli													; prevent further interrupts occuring
 	ctxswi
 
-	lightson 0b00000001
 	call handle_usb_bus_event
 	call clear_usb_interrupt_flags_a
 	call clear_usb_interrupt_flags_b
@@ -714,7 +686,6 @@ isr_device_transaction_complete:
 	cli												; prevent further interrupts occurring
 	ctxswi
 
-	lightson 0b00000000
 	lds TEMP0, USB_INTFLAGSBSET						; read current interrupt flag to check if this txn was setup or IO
 	andi TEMP0, 0b00000001							; bitwise "and" with bitmask to check if the transaction type was SETUP
 	sbrc TEMP0, 0									; skip next instruction if bit 0 is != 1
