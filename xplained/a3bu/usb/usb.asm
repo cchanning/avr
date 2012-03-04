@@ -54,10 +54,8 @@ reset:
 	ldi ZH, high(APPLICATION_STACK_START)						; configure high byte of application stack pointer
 	sbiw Z, 1													; cause the SP to be one before the stack start address, this is required as a pusha will first increment Z. In the first usage scenario it will make sure the data is placed at the stack start address.	
 
-	call configure_heap
 	call configure_system_clock
-	call configure_usb_clock
-	call configure_usb_io
+	call configure_heap
 	call enable_interrupts
 	call enable_usb
 
@@ -65,6 +63,17 @@ reset:
 
 main:
 	jmp main													; keep the CPU busy forever
+
+/*********************************************************************************************
+ * Debug
+ *********************************************************************************************/
+
+ .macro lightson
+	ldi TEMP0, 0b00000011
+	sts PORTR_DIR, TEMP0
+	ldi TEMP0, @0
+	sts PORTR_OUT, TEMP0
+.endm
 
 /*********************************************************************************************
  * Application Memory
@@ -369,9 +378,9 @@ enable_interrupts:
 	ldi TEMP0, 0b00000100
 	sts PMIC_CTRL, TEMP0										; enable high level in PMIC
 	ldi TEMP0, 0b01000011
-	sts USB_INTCTRLA, TEMP0										; enable txn and bus (BUSEVIE) interrupts to fire for USB
-	ldi TEMP0, 0b00000001								
-	sts USB_INTCTRLB, TEMP0										; enable interrupts to fire when SETUP transactions complete on USB
+	sts USB_INTCTRLA, TEMP0										; enable txn and bus (BUSEVIE) interrupts to fire for USB (with interrupt level set to high)
+	ldi TEMP0, 0b00000011								
+	sts USB_INTCTRLB, TEMP0										; enable interrupts to fire when SETUP or I/O transactions complete on USB
 	sei															; enable global interrupts
 
 	ctxswib
@@ -383,7 +392,9 @@ enable_interrupts:
 enable_usb:
 	ctxswi
 
-	call calibrate_usb											; load calibrated USB data from device production row
+	call configure_usb_pad										; load calibrated USB data from device production row
+	call configure_usb_io										; configure endpoints etc
+	call configure_usb_clock									; configure USB clock
 
 	ldi TEMP0, 0b11010000										; enables the following usb port, full speed, frame number tracking
 	ldi TEMP1, ENDPOINT_COUNT
@@ -412,7 +423,7 @@ configure_usb_io:
 /**
  * Loads the USB calibration data from the device production row into the USB calibration registers
  */
-calibrate_usb:
+configure_usb_pad:
 	ctxswi
 
 	movw X, Z												; save app stack pointer as LPM needs the 16bit Z register
@@ -425,7 +436,7 @@ calibrate_usb:
 	mov ZL, TEMP0											; set ZL to be the USBCAL0 address
 	lpm TEMP0, Z											; load the USBCAL0 value from NVM into TEMP0
 	sts USB_CAL0, TEMP0										; store USBCAL0 value to USB module CAL0 register
-	
+ 
 	ldi TEMP0, PROD_SIGNATURES_START + NVM_PROD_SIGNATURES_USBCAL1_offset
 	clr ZH
 	mov ZL, TEMP0											; set ZL to be the USBCAL1 address
@@ -451,7 +462,7 @@ configure_usb_endpoints:
 	sts USB_EPPTR, TEMP0										; configure low byte of endpoint config table pointer
 	ldi TEMP0, high(ENDPOINT_CFG_TBL_START)
 	sts USB_EPPTR + 1, TEMP0									; configure high byte of endpoint config table pointer
-	ldi TEMP0, 0												; configure endpoint counter
+	clr TEMP0													; set endpoint counter == 0
 
 	//configure endpoint 0 out pipe
 	coep TEMP0
@@ -677,17 +688,16 @@ process_usb_bus_event_reset:
  ****************************************************************************************/
 
 isr_device_bus_event:
-	ctxswi
-	
 	cli													; prevent further interrupts occuring
+	ctxswi
 
+	lightson 0b00000001
 	call handle_usb_bus_event
 	call clear_usb_interrupt_flags_a
 	call clear_usb_interrupt_flags_b
 
-	sei													; enable interrupts again
-
 	ctxswib
+	sei													; enable interrupts again
 	reti
 
 /*
@@ -698,15 +708,10 @@ isr_device_bus_event:
 	The USB interrupt flags will be cleared before returning.
  */
 isr_device_transaction_complete:
+	cli												; prevent further interrupts occurring
 	ctxswi
 
-	cli												; prevent further interrupts occurring
-
-	ldi TEMP0, 0b00000011
-	sts PORTR_DIR, TEMP0
-	ldi TEMP0, 0x00000010
-	sts PORTR_OUT, TEMP0
-
+	lightson 0b00000000
 	lds TEMP0, USB_INTFLAGSBSET						; read current interrupt flag to check if this txn was setup or IO
 	andi TEMP0, 0b00000001							; bitwise "and" with bitmask to check if the transaction type was SETUP
 	sbrc TEMP0, 0									; skip next instruction if bit 0 is != 1
@@ -716,7 +721,6 @@ isr_device_transaction_complete:
 	call clear_usb_interrupt_flags_a
 	call clear_usb_interrupt_flags_b
 
-	sei												; enable interrupts again
-
 	ctxswib
+	sei												; enable interrupts again
 	reti
