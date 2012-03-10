@@ -56,6 +56,9 @@ reset:
 	ldi YH, high(APPLICATION_STACK_START)						; configure high byte of application stack pointer
 	sbiw Y, 1													; cause the SP to be one before the stack start address, this is required as a pusha will first increment Z. In the first usage scenario it will make sure the data is placed at the stack start address.	
 
+	call configure_usb_lookup_tables
+	call resolve_usb_request_to_handling_function
+
 	call configure_system_clock
 	call configure_heap
 	call configure_usb_lookup_tables
@@ -784,6 +787,12 @@ handle_usb_setup_request:
 resolve_usb_request_to_handling_function:
 	ctxswi
 
+	//temp
+	pushai low(REQUEST_TYPE_TABLE_START)
+	pushai high(REQUEST_TYPE_TABLE_START)
+	pushai 0
+	pushai 0
+
 	popa TEMP0
 	popa TEMP1
 	popa ZH						; table start address high byte
@@ -802,14 +811,35 @@ resolve_usb_request_to_handling_function:
 	breq RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_RETURN_NULL
 
 	//now walk through the table so we can lookup the function we need
-	jmp RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_RETURN
+	ldd TEMP2, Z + TABLE_METADATA_OFFSET_ENTRY_COUNT
+	ldd TEMP3, Z + TABLE_METADATA_OFFSET_KEY_MASK
+	and TEMP1, TEMP3							; TEMP1 now holds the key we're looking for
+	adiw Z, TABLE_METADATA_SIZE					; Z now points at the first table entry
+
+	RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_LOOP:
+		dec TEMP2
+		ld TEMP3, Z								; TEMP3 now holds the key for the current table entry
+		cp TEMP0, TEMP3
+		brne RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_LOOP_CONTINUE
+		ldd XL, Z + 1
+		ldd XH, Z + 2
+		pusha XL
+		pusha XH
+		jmp RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_RETURN
+
+		RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_LOOP_CONTINUE:
+			adiw Z, 3								; a row is 3 bytes in size (1 for key, 2 for address)
+			cpi TEMP0, 0
+			brne RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_LOOP
+
+	jmp RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_RETURN_NULL
 
 	RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_RETURN_NULL:
 		pushai 0
 		pushai 0
 
 	RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_RETURN:
-
+	icall
 	ctxswib
 	ret
 
@@ -819,7 +849,8 @@ resolve_usb_request_to_function_table:
 	popa TEMP0					; full request type
 	popa ZH						; index table start address high byte
 	popa ZL						; index table start address low byte
-	movw X, Z
+	movw X, Z					; copy table pointer in Z to X
+	mov TEMP4, TEMP0			; copy full request type as TEMP0 will be bitmasked to only include the value we're interested in
 
 	ldd TEMP1, Z + TABLE_METADATA_OFFSET_TABLE_TYPE
 	cpi TEMP1, TABLE_TYPE_FUNCTION
@@ -835,11 +866,15 @@ resolve_usb_request_to_function_table:
 		ld TEMP2, Z								; TEMP2 now holds the key for the current table entry
 		cp TEMP0, TEMP2
 		brne RESOLVE_USB_REQUEST_TO_FUNCTION_TABLE_ENTRY_LOOP_CONTINUE
-
-		RESOLVE_USB_REQUEST_TO_FUNCTION_TABLE_ENTRY_FOUND:
-			ldd XL, Z + 1
-			ldd XH, Z + 2
-			jmp RESOLVE_USB_REQUEST_TO_FUNCTION_TABLE_RETURN_X
+		ldd XL, Z + 1
+		ldd XH, Z + 2
+		pusha XL
+		pusha XH
+		pusha TEMP4
+		call resolve_usb_request_to_function_table		; now recurse and follow the table link, if the table is a function table this function will return immediately
+		popa XH											; X should either contain the address of the function table or 0 (null)
+		popa XL
+		jmp RESOLVE_USB_REQUEST_TO_FUNCTION_TABLE_RETURN_X
 
 		RESOLVE_USB_REQUEST_TO_FUNCTION_TABLE_ENTRY_LOOP_CONTINUE:
 			adiw Z, 3								; a row is 3 bytes in size (1 for key, 2 for address)
@@ -849,8 +884,8 @@ resolve_usb_request_to_function_table:
 	jmp RESOLVE_USB_REQUEST_TO_FUNCTION_TABLE_RETURN_NULL
 
 	RESOLVE_USB_REQUEST_TO_FUNCTION_TABLE_RETURN_X:
-		pusha ZL
-		pusha ZH
+		pusha XL
+		pusha XH
 		jmp RESOLVE_USB_REQUEST_TO_FUNCTION_TABLE_RETURN
 
 	RESOLVE_USB_REQUEST_TO_FUNCTION_TABLE_RETURN_NULL:
