@@ -56,9 +56,6 @@ reset:
 	ldi YH, high(APPLICATION_STACK_START)						; configure high byte of application stack pointer
 	sbiw Y, 1													; cause the SP to be one before the stack start address, this is required as a pusha will first increment Z. In the first usage scenario it will make sure the data is placed at the stack start address.	
 
-	call configure_usb_lookup_tables
-	call resolve_usb_request_to_handling_function
-
 	call configure_system_clock
 	call configure_heap
 	call configure_usb_lookup_tables
@@ -859,17 +856,26 @@ handle_usb_setup_request:
 		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_DATAPTRL														
 		ldd TEMP2, Z + ENDPOINT_PIPE_OFFSET_DATAPTRH			; temp2:temp1 now holds the data pointer for the endpoint output pipe
 		movw X, TEMP2:TEMP1										; copy endpoint output pipe data pointer address in to Z
-		ld TEMP1, X												; load byte from data buffer *(ptr + 0)
+		ld TEMP1, X												; load request type from data buffer *(ptr + 0)
 		adiw X, 1
-		ld TEMP2, X												; load byte from data buffer *(ptr + 1)
+		ld TEMP2, X												; load function type from data buffer *(ptr + 1)
 
-		//resolve value in TEMP1 to a handling function
 		pushai low(REQUEST_TYPE_TABLE_START)
 		pushai high(REQUEST_TYPE_TABLE_START)
 		pusha TEMP2
 		pusha TEMP1
 		call resolve_usb_request_to_handling_function
-			
+		popa ZL
+		popa ZH
+		clr TEMP1
+		cp ZL, TEMP1
+		cpc ZH, TEMP1
+		breq HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP_CONTINUE	; if we got a null pointer then skip on
+
+		//invoke the handling function
+		pusha TEMP0												; push the endpoint number
+		icall													; call our function (address stored in Z)
+
 
 		HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP_CONTINUE:
 		inc TEMP0
@@ -891,12 +897,6 @@ handle_usb_setup_request:
  */
 resolve_usb_request_to_handling_function:
 	ctxswi
-
-	//temp
-	pushai low(REQUEST_TYPE_TABLE_START)
-	pushai high(REQUEST_TYPE_TABLE_START)
-	pushai 0x06
-	pushai 0b10000000
 
 	popa TEMP0					; request type
 	popa TEMP1					; function type
@@ -926,10 +926,10 @@ resolve_usb_request_to_handling_function:
 		ld TEMP3, Z								; TEMP3 now holds the key for the current table entry
 		cp TEMP1, TEMP3
 		brne RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_LOOP_CONTINUE
-		ldd XL, Z + 1
-		ldd XH, Z + 2
-		pusha XL
-		pusha XH
+		ldd XL, Z + 1							; copy low byte of function address
+		ldd XH, Z + 2							; copy high byte of function address
+		pusha XL								; save low byte to the application stack
+		pusha XH								; save high byte to the application stack
 		jmp RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_RETURN
 
 		RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_LOOP_CONTINUE:
@@ -1050,7 +1050,16 @@ process_standard_device_set_feature_request:
 process_standard_device_set_address_request:
 	ret
 
+/**
+ * Sets up the input databuffer with the device descriptor
+ *
+ * params:
+ *			endpointNumber
+ */
 process_standard_device_get_descriptor_request:
+	ctxswi
+
+	ctxswib
 	ret
 
 process_standard_device_set_descriptor_request:
