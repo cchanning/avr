@@ -263,25 +263,43 @@ configure_heap:
 .equ TABLE_METADATA_OFFSET_TABLE_TYPE = 0
 .equ TABLE_METADATA_OFFSET_ENTRY_COUNT = 1
 .equ TABLE_METADATA_OFFSET_KEY_MASK = 2
+.equ TABLE_ENTRY_SIZE = 3
 
-//key=request type/value=pointer to  REQUEST_TYPE_*_TABLE
-.equ REQUEST_TYPE_TABLE_KEY_MASK = 0b11110000
+//key=request type/value=pointer to REQUEST_TYPE_*_TABLE
+.equ REQUEST_TYPE_TABLE_KEY_MASK = 0b01100000
 .equ REQUEST_TYPE_TABLE_START = ENDPOINT_CFG_TBL_START + (ENDPOINT_COUNT * 16)
 .equ REQUEST_TYPE_TABLE_ENTRY_COUNT = 20
-.equ REQUEST_TYPE_TABLE_SIZE = 50
+.equ REQUEST_TYPE_TABLE_SIZE = (REQUEST_TYPE_TABLE_ENTRY_COUNT * TABLE_ENTRY_SIZE) + TABLE_METADATA_SIZE
 
 //key=recipient type/value=pointer to REQUEST_TYPE_STANDARD_RECIPIENT_*_TABLE
-.equ REQUEST_TYPE_STANDARD_TABLE_KEY_MASK = 0b00110000
+.equ REQUEST_TYPE_STANDARD_TABLE_KEY_MASK = 0b00001111
 .equ REQUEST_TYPE_STANDARD_TABLE_START = REQUEST_TYPE_TABLE_START + REQUEST_TYPE_TABLE_SIZE
 .equ REQUEST_TYPE_STANDARD_TABLE_ENTRY_COUNT = 20
-.equ REQUEST_TYPE_STANDARD_TABLE_SIZE = 50
+.equ REQUEST_TYPE_STANDARD_TABLE_SIZE = (REQUEST_TYPE_STANDARD_TABLE_ENTRY_COUNT * TABLE_ENTRY_SIZE) + TABLE_METADATA_SIZE
 
- //key=device request type/value=pointer to standard device request type function e.g. set address
-.equ REQUEST_TYPE_STANDARD_RECIPIENT_DEVICE_TABLE_KEY_MASK = 0b00001100
+//key=device request type/value=pointer to standard device request type function e.g. set address
+.equ REQUEST_TYPE_STANDARD_RECIPIENT_DEVICE_TABLE_KEY_MASK = 0b11111111
 .equ REQUEST_TYPE_STANDARD_RECIPIENT_DEVICE_TABLE_START = REQUEST_TYPE_STANDARD_TABLE_START + REQUEST_TYPE_STANDARD_TABLE_SIZE
 .equ REQUEST_TYPE_STANDARD_RECIPIENT_DEVICE_TABLE_ENTRY_COUNT = 20
-.equ REQUEST_TYPE_STANDARD_RECIPIENT_DEVICE_TABLE_SIZE = 50
+.equ REQUEST_TYPE_STANDARD_RECIPIENT_DEVICE_TABLE_SIZE = (REQUEST_TYPE_STANDARD_RECIPIENT_DEVICE_TABLE_ENTRY_COUNT * TABLE_ENTRY_SIZE) + TABLE_METADATA_SIZE
 
+//key=device request type/value=pointer to standard interface request type function
+.equ REQUEST_TYPE_STANDARD_RECIPIENT_INTERFACE_TABLE_KEY_MASK = 0b11111111
+.equ REQUEST_TYPE_STANDARD_RECIPIENT_INTERFACE_TABLE_START = REQUEST_TYPE_STANDARD_RECIPIENT_DEVICE_TABLE_START + REQUEST_TYPE_STANDARD_RECIPIENT_DEVICE_TABLE_SIZE
+.equ REQUEST_TYPE_STANDARD_RECIPIENT_INTERFACE_TABLE_ENTRY_COUNT = 20
+.equ REQUEST_TYPE_STANDARD_RECIPIENT_INTERFACE_TABLE_SIZE = (REQUEST_TYPE_STANDARD_RECIPIENT_INTERFACE_TABLE_ENTRY_COUNT * TABLE_ENTRY_SIZE) + TABLE_METADATA_SIZE
+
+//key=device request type/value=pointer to standard endpoint request type function
+.equ REQUEST_TYPE_STANDARD_RECIPIENT_ENDPOINT_TABLE_KEY_MASK = 0b11111111
+.equ REQUEST_TYPE_STANDARD_RECIPIENT_ENDPOINT_TABLE_START = REQUEST_TYPE_STANDARD_RECIPIENT_INTERFACE_TABLE_START + REQUEST_TYPE_STANDARD_RECIPIENT_INTERFACE_TABLE_SIZE
+.equ REQUEST_TYPE_STANDARD_RECIPIENT_ENDPOINT_TABLE_ENTRY_COUNT = 20
+.equ REQUEST_TYPE_STANDARD_RECIPIENT_ENDPOINT_TABLE_SIZE = (REQUEST_TYPE_STANDARD_RECIPIENT_ENDPOINT_TABLE_ENTRY_COUNT * TABLE_ENTRY_SIZE) + TABLE_METADATA_SIZE
+
+//key=device request type/value=pointer to standard other request type function
+.equ REQUEST_TYPE_STANDARD_RECIPIENT_OTHER_TABLE_KEY_MASK = 0b11111111
+.equ REQUEST_TYPE_STANDARD_RECIPIENT_OTHER_TABLE_START = REQUEST_TYPE_STANDARD_RECIPIENT_ENDPOINT_TABLE_START + REQUEST_TYPE_STANDARD_RECIPIENT_ENDPOINT_TABLE_SIZE
+.equ REQUEST_TYPE_STANDARD_RECIPIENT_OTHER_TABLE_ENTRY_COUNT = 20
+.equ REQUEST_TYPE_STANDARD_RECIPIENT_OTHER_TABLE_SIZE = (REQUEST_TYPE_STANDARD_RECIPIENT_OTHER_TABLE_ENTRY_COUNT * TABLE_ENTRY_SIZE) + TABLE_METADATA_SIZE
 
 .equ REQUEST_MASK_TYPE_STANDARD = 0b00000000
 .equ REQUEST_MASK_TYPE_CLASS = 0b00100000
@@ -300,6 +318,12 @@ configure_heap:
 .equ REQUEST_DEVICE_MASK_SET_DESCRIPTOR = 0b00000111
 .equ REQUEST_DEVICE_MASK_GET_CONFIGURATION = 0b00001000
 .equ REQUEST_DEVICE_MASK_SET_CONFIGURATION = 0b00001001
+
+.equ REQUEST_INTERFACE_MASK_GET_STATUS = 0b00000000
+.equ REQUEST_INTERFACE_MASK_CLEAR_FEATURE = 0b00000001
+.equ REQUEST_INTERFACE_MASK_SET_FEATURE = 0b00000011
+.equ REQUEST_INTERFACE_MASK_GET_INTERFACE = 0b00001010
+.equ REQUEST_INTERFACE_MASK_SET_INTERFACE = 0b00010001
 
 .equ DEVICE_DESCRIPTOR_LENGTH = 0x12							; 18 bytes long
 .equ DEVICE_DESCRIPTOR_TYPE = 0x01								; device descriptor
@@ -551,8 +575,29 @@ configure_usb_lookup_tables:
 	std Z + 2, TEMP0										; store high byte of table address
 
 	//add table entry for recipient type interface
+	ldi TEMP0, REQUEST_MASK_TYPE_RECIPIENT_INTERFACE
+	std Z + 3, TEMP0										; store key=REQUEST_MASK_TYPE_RECIPIENT_INTERFACE
+	ldi TEMP0, low(REQUEST_TYPE_STANDARD_RECIPIENT_INTERFACE_TABLE_START)
+	std Z + 4, TEMP0										; store low byte of table address
+	ldi TEMP0, high(REQUEST_TYPE_STANDARD_RECIPIENT_INTERFACE_TABLE_START)
+	std Z + 5, TEMP0										; store high byte of table address
+
 	//add table entry for recipient type endpoint
+	ldi TEMP0, REQUEST_MASK_TYPE_RECIPIENT_ENDPOINT
+	std Z + 6, TEMP0										; store key=REQUEST_MASK_TYPE_RECIPIENT_ENDPOINT
+	ldi TEMP0, low(REQUEST_TYPE_STANDARD_RECIPIENT_ENDPOINT_TABLE_START)
+	std Z + 7, TEMP0										; store low byte of table address
+	ldi TEMP0, high(REQUEST_TYPE_STANDARD_RECIPIENT_ENDPOINT_TABLE_START)
+	std Z + 8, TEMP0										; store high byte of table address
+
 	//add table entry for recipient type other
+	ldi TEMP0, REQUEST_MASK_TYPE_RECIPIENT_OTHER
+	std Z + 9, TEMP0										; store key=REQUEST_MASK_TYPE_RECIPIENT_OTHER
+	ldi TEMP0, low(REQUEST_TYPE_STANDARD_RECIPIENT_OTHER_TABLE_START)
+	std Z + 10, TEMP0										; store low byte of table address
+	ldi TEMP0, high(REQUEST_TYPE_STANDARD_RECIPIENT_OTHER_TABLE_START)
+	std Z + 11, TEMP0										; store high byte of table address
+
 
 	/****************************************************************************
 	 * Configure standard request type recipient device index table
@@ -631,8 +676,66 @@ configure_usb_lookup_tables:
 	ldi TEMP0, high(process_standard_device_set_configuration_request)
 	std Z + 23, TEMP0										; store high byte of function address
 
+
+	/****************************************************************************
+	 * Configure standard request type recipient interface index table
+	 ****************************************************************************/
+
+	//load table starting point
+	ldi ZL, low(REQUEST_TYPE_STANDARD_RECIPIENT_INTERFACE_TABLE_START)
+	ldi ZH, high(REQUEST_TYPE_STANDARD_RECIPIENT_INTERFACE_TABLE_START)
+
+	//configure table metadata
+	ldi TEMP0, TABLE_TYPE_FUNCTION
+	std Z + TABLE_METADATA_OFFSET_TABLE_TYPE, TEMP0
+	ldi TEMP0, REQUEST_TYPE_STANDARD_RECIPIENT_INTERFACE_TABLE_ENTRY_COUNT
+	std Z + TABLE_METADATA_OFFSET_ENTRY_COUNT, TEMP0
+	ldi TEMP0, REQUEST_TYPE_STANDARD_RECIPIENT_INTERFACE_TABLE_KEY_MASK
+	std Z + TABLE_METADATA_OFFSET_KEY_MASK, TEMP0												; add table mask entry (use this to dynamically mask the bits that relate to the keys we're looking for)
+
+	//load starting point for row data
+	ldi ZL, low(REQUEST_TYPE_STANDARD_RECIPIENT_INTERFACE_TABLE_START + TABLE_METADATA_SIZE)
+	ldi ZH, high(REQUEST_TYPE_STANDARD_RECIPIENT_INTERFACE_TABLE_START + TABLE_METADATA_SIZE)
+
+	//add table entry for device get status
+	ldi TEMP0, REQUEST_INTERFACE_MASK_GET_STATUS
+	st Z, TEMP0										; store key=REQUEST_INTERFACE_MASK_GET_STATUS
+	ldi TEMP0, low(process_standard_interface_get_status_request)
+	std Z + 1, TEMP0										; store low byte of function address
+	ldi TEMP0, high(process_standard_interface_get_status_request)
+	std Z + 2, TEMP0	
+	//add table entry for device clear feature
+	ldi TEMP0, REQUEST_INTERFACE_MASK_CLEAR_FEATURE
+	std Z + 3, TEMP0										; store key=REQUEST_INTERFACE_MASK_CLEAR_FEATURE
+	ldi TEMP0, low(process_standard_interface_clear_feature_request)
+	std Z + 4, TEMP0										; store low byte of function address
+	ldi TEMP0, high(process_standard_interface_clear_feature_request)
+	std Z + 5, TEMP0	
+	//add table entry for device set feature
+	ldi TEMP0, REQUEST_INTERFACE_MASK_SET_FEATURE
+	std Z + 6, TEMP0										; store key=REQUEST_INTERFACE_MASK_SET_FEATURE
+	ldi TEMP0, low(process_standard_interface_set_feature_request)
+	std Z + 7, TEMP0										; store low byte of function address
+	ldi TEMP0, high(process_standard_interface_set_feature_request)
+	std Z + 8, TEMP0	
+	//add table entry for device get interface
+	ldi TEMP0, REQUEST_INTERFACE_MASK_GET_INTERFACE
+	std Z + 9, TEMP0										; store key=REQUEST_INTERFACE_MASK_GET_INTERFACE
+	ldi TEMP0, low(process_standard_interface_get_interface_request)
+	std Z + 10, TEMP0										; store low byte of function address
+	ldi TEMP0, high(process_standard_interface_get_interface_request)
+	std Z + 11, TEMP0
+	//add table entry for device set interface
+	ldi TEMP0, REQUEST_INTERFACE_MASK_SET_INTERFACE
+	std Z + 12, TEMP0										; store key=REQUEST_INTERFACE_MASK_SET_INTERFACE
+	ldi TEMP0, low(process_standard_interface_set_interface_request)
+	std Z + 13, TEMP0										; store low byte of function address
+	ldi TEMP0, high(process_standard_interface_set_interface_request)
+	std Z + 14, TEMP0
+
 	ctxswib
 	ret
+
 
 /****************************************************************************************
  * USB Endpoint Functions
@@ -779,10 +882,12 @@ handle_usb_setup_request:
 
 /**
  * Needs to be recursive, stop when our address type is func
- * params: request type,
+ * params:
+ *		   index table start address byte (low),
+ *		   index table start address byte (high),
  *		   function type,
- *		   index table start address byte (high)
- *		   index table start address byte (low)
+ *		   request type
+ *			
  */
 resolve_usb_request_to_handling_function:
 	ctxswi
@@ -790,11 +895,11 @@ resolve_usb_request_to_handling_function:
 	//temp
 	pushai low(REQUEST_TYPE_TABLE_START)
 	pushai high(REQUEST_TYPE_TABLE_START)
-	pushai 0
-	pushai 0
+	pushai 0x06
+	pushai 0b10000000
 
-	popa TEMP0
-	popa TEMP1
+	popa TEMP0					; request type
+	popa TEMP1					; function type
 	popa ZH						; table start address high byte
 	popa ZL						; table start address low byte
 
@@ -819,7 +924,7 @@ resolve_usb_request_to_handling_function:
 	RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_LOOP:
 		dec TEMP2
 		ld TEMP3, Z								; TEMP3 now holds the key for the current table entry
-		cp TEMP0, TEMP3
+		cp TEMP1, TEMP3
 		brne RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_LOOP_CONTINUE
 		ldd XL, Z + 1
 		ldd XH, Z + 2
@@ -828,8 +933,8 @@ resolve_usb_request_to_handling_function:
 		jmp RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_RETURN
 
 		RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_LOOP_CONTINUE:
-			adiw Z, 3								; a row is 3 bytes in size (1 for key, 2 for address)
-			cpi TEMP0, 0
+			adiw Z, TABLE_ENTRY_SIZE			; a row is 3 bytes in size (1 for key, 2 for address)
+			cpi TEMP2, 0
 			brne RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_LOOP
 
 	jmp RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_RETURN_NULL
@@ -839,7 +944,7 @@ resolve_usb_request_to_handling_function:
 		pushai 0
 
 	RESOLVE_USB_REQUEST_TO_HANDLING_FUNCTION_RETURN:
-	icall
+
 	ctxswib
 	ret
 
@@ -877,8 +982,8 @@ resolve_usb_request_to_function_table:
 		jmp RESOLVE_USB_REQUEST_TO_FUNCTION_TABLE_RETURN_X
 
 		RESOLVE_USB_REQUEST_TO_FUNCTION_TABLE_ENTRY_LOOP_CONTINUE:
-			adiw Z, 3								; a row is 3 bytes in size (1 for key, 2 for address)
-			cpi TEMP0, 0
+			adiw Z, TABLE_ENTRY_SIZE					; a row is 3 bytes in size (1 for key, 2 for address)
+			cpi TEMP1, 0
 			brne RESOLVE_USB_REQUEST_TO_FUNCTION_TABLE_ENTRY_LOOP
 
 	jmp RESOLVE_USB_REQUEST_TO_FUNCTION_TABLE_RETURN_NULL
@@ -955,6 +1060,23 @@ process_standard_device_get_configuration_request:
 	ret
 
 process_standard_device_set_configuration_request:
+	ret
+
+
+//interface
+process_standard_interface_get_status_request:
+	ret
+
+process_standard_interface_clear_feature_request:
+	ret
+
+process_standard_interface_set_feature_request:
+	ret
+
+process_standard_interface_get_interface_request:
+	ret
+
+process_standard_interface_set_interface_request:
 	ret
 
 /****************************************************************************************
