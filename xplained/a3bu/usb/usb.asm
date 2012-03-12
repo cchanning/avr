@@ -483,8 +483,6 @@ configure_usb_io:
 configure_usb_pad:
 	ctxswi
 
-	movw X, Z												; save app stack pointer as LPM needs the 16bit Z register
-
 	ldi TEMP0, NVM_CMD_READ_CALIB_ROW_gc															
 	sts NVM_CMD, TEMP0										; load nvm command register for reading calibration row	
 
@@ -502,8 +500,6 @@ configure_usb_pad:
 
 	ldi TEMP0, NVM_CMD_NO_OPERATION_gc
 	sts NVM_CMD, TEMP0										; clear NVM command register
-	
-	movw Z, X												; restore app stack pointer
 
 	ctxswib
 	ret
