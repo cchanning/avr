@@ -855,14 +855,14 @@ handle_usb_setup_request:
 		ld TEMP1, X												; load request type from data buffer *(ptr + 0)
 		adiw X, 1
 		ld TEMP2, X												; load function type from data buffer *(ptr + 1)
-
+		
 		pushai low(REQUEST_TYPE_TABLE_START)
 		pushai high(REQUEST_TYPE_TABLE_START)
 		pusha TEMP2
 		pusha TEMP1
 		call resolve_usb_request_to_handling_function
-		popa ZL
 		popa ZH
+		popa ZL
 		clr TEMP1
 		cp ZL, TEMP1
 		cpc ZH, TEMP1
@@ -1054,6 +1054,8 @@ process_standard_device_set_address_request:
  */
 process_standard_device_get_descriptor_request:
 	ctxswi
+	
+	lightson 0x00
 
 	ctxswib
 	ret
