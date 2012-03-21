@@ -196,6 +196,7 @@ configure_heap:
 	ctxswib
 	ret
 
+
 /*********************************************************************************************
  * USB Endpoint
  *********************************************************************************************/
@@ -322,6 +323,11 @@ configure_heap:
 .equ REQUEST_INTERFACE_MASK_GET_INTERFACE = 0b00001010
 .equ REQUEST_INTERFACE_MASK_SET_INTERFACE = 0b00010001
 
+.equ REQUEST_ENDPOINT_MASK_GET_STATUS = 0b00000000
+.equ REQUEST_ENDPOINT_MASK_CLEAR_FEATURE = 0b00000001
+.equ REQUEST_ENDPOINT_MASK_SET_FEATURE = 0b00000011
+.equ REQUEST_ENDPOINT_MASK_SYNCH_FRAME = 0b00010010
+
 .equ DEVICE_DESCRIPTOR_LENGTH = 0x12							; 18 bytes long
 .equ DEVICE_DESCRIPTOR_TYPE = 0x01								; device descriptor
 .equ DEVICE_DESCRIPTOR_BCD_USB = 0x0200							; support for USB 2.0 
@@ -336,6 +342,10 @@ configure_heap:
 .equ DEVICE_DESCRIPTOR_PRODUCT = 0x00
 .equ DEVICE_DESCRIPTOR_SERIAL_NUMBER = 0x00
 .equ DEVICE_DESCRIPTOR_NUM_CONFIGURATIONS = 0x01 
+
+.equ DEVICE_DESCRIPTOR_TYPE_STRING = 0b00000011
+
+//DEVICE_NAME: .db "Channing USB Device", 0
 
 /****************************************************************************************
  * Clock Functions
@@ -690,35 +700,35 @@ configure_usb_lookup_tables:
 	ldi ZL, low(REQUEST_TYPE_STANDARD_RECIPIENT_INTERFACE_TABLE_START + TABLE_METADATA_SIZE)
 	ldi ZH, high(REQUEST_TYPE_STANDARD_RECIPIENT_INTERFACE_TABLE_START + TABLE_METADATA_SIZE)
 
-	//add table entry for device get status
+	//add table entry for interface get status
 	ldi TEMP0, REQUEST_INTERFACE_MASK_GET_STATUS
 	st Z, TEMP0										; store key=REQUEST_INTERFACE_MASK_GET_STATUS
 	ldi TEMP0, low(process_standard_interface_get_status_request)
 	std Z + 1, TEMP0										; store low byte of function address
 	ldi TEMP0, high(process_standard_interface_get_status_request)
 	std Z + 2, TEMP0	
-	//add table entry for device clear feature
+	//add table entry for interface clear feature
 	ldi TEMP0, REQUEST_INTERFACE_MASK_CLEAR_FEATURE
 	std Z + 3, TEMP0										; store key=REQUEST_INTERFACE_MASK_CLEAR_FEATURE
 	ldi TEMP0, low(process_standard_interface_clear_feature_request)
 	std Z + 4, TEMP0										; store low byte of function address
 	ldi TEMP0, high(process_standard_interface_clear_feature_request)
 	std Z + 5, TEMP0	
-	//add table entry for device set feature
+	//add table entry for interface set feature
 	ldi TEMP0, REQUEST_INTERFACE_MASK_SET_FEATURE
 	std Z + 6, TEMP0										; store key=REQUEST_INTERFACE_MASK_SET_FEATURE
 	ldi TEMP0, low(process_standard_interface_set_feature_request)
 	std Z + 7, TEMP0										; store low byte of function address
 	ldi TEMP0, high(process_standard_interface_set_feature_request)
 	std Z + 8, TEMP0	
-	//add table entry for device get interface
+	//add table entry for interface get interface
 	ldi TEMP0, REQUEST_INTERFACE_MASK_GET_INTERFACE
 	std Z + 9, TEMP0										; store key=REQUEST_INTERFACE_MASK_GET_INTERFACE
 	ldi TEMP0, low(process_standard_interface_get_interface_request)
 	std Z + 10, TEMP0										; store low byte of function address
 	ldi TEMP0, high(process_standard_interface_get_interface_request)
 	std Z + 11, TEMP0
-	//add table entry for device set interface
+	//add table entry for interface set interface
 	ldi TEMP0, REQUEST_INTERFACE_MASK_SET_INTERFACE
 	std Z + 12, TEMP0										; store key=REQUEST_INTERFACE_MASK_SET_INTERFACE
 	ldi TEMP0, low(process_standard_interface_set_interface_request)
@@ -726,9 +736,57 @@ configure_usb_lookup_tables:
 	ldi TEMP0, high(process_standard_interface_set_interface_request)
 	std Z + 14, TEMP0
 
+	/****************************************************************************
+	 * Configure standard request type recipient endpoint index table
+	 ****************************************************************************/
+
+	//load table starting point
+	ldi ZL, low(REQUEST_TYPE_STANDARD_RECIPIENT_ENDPOINT_TABLE_START)
+	ldi ZH, high(REQUEST_TYPE_STANDARD_RECIPIENT_ENDPOINT_TABLE_START)
+
+	//configure table metadata
+	ldi TEMP0, TABLE_TYPE_FUNCTION
+	std Z + TABLE_METADATA_OFFSET_TABLE_TYPE, TEMP0
+	ldi TEMP0, REQUEST_TYPE_STANDARD_RECIPIENT_ENDPOINT_TABLE_ENTRY_COUNT
+	std Z + TABLE_METADATA_OFFSET_ENTRY_COUNT, TEMP0
+	ldi TEMP0, REQUEST_TYPE_STANDARD_RECIPIENT_ENDPOINT_TABLE_KEY_MASK
+	std Z + TABLE_METADATA_OFFSET_KEY_MASK, TEMP0	
+
+	//load starting point for row data
+	ldi ZL, low(REQUEST_TYPE_STANDARD_RECIPIENT_ENDPOINT_TABLE_START + TABLE_METADATA_SIZE)
+	ldi ZH, high(REQUEST_TYPE_STANDARD_RECIPIENT_ENDPOINT_TABLE_START + TABLE_METADATA_SIZE)
+
+	//add table entry for endpoint get status
+	ldi TEMP0, REQUEST_ENDPOINT_MASK_GET_STATUS
+	st Z, TEMP0										; store key=REQUEST_ENDPOINT_MASK_GET_STATUS
+	ldi TEMP0, low(process_standard_interface_get_status_request)
+	std Z + 1, TEMP0										; store low byte of function address
+	ldi TEMP0, high(process_standard_interface_get_status_request)
+	std Z + 2, TEMP0	
+	//add table entry for endpoint clear status
+	ldi TEMP0, REQUEST_ENDPOINT_MASK_CLEAR_FEATURE
+	std Z + 3, TEMP0										; store key=REQUEST_ENDPOINT_MASK_CLEAR_FEATURE
+	ldi TEMP0, low(process_standard_endpoint_clear_feature_request)
+	std Z + 4, TEMP0										; store low byte of function address
+	ldi TEMP0, high(process_standard_endpoint_clear_feature_request)
+	std Z + 5, TEMP0	
+	//add table entry for endpoint set status
+	ldi TEMP0, REQUEST_ENDPOINT_MASK_SET_FEATURE
+	std Z + 6, TEMP0										; store key=REQUEST_ENDPOINT_MASK_SET_FEATURE
+	ldi TEMP0, low(process_standard_endpoint_set_feature_request)
+	std Z + 7, TEMP0										; store low byte of function address
+	ldi TEMP0, high(process_standard_endpoint_set_feature_request)
+	std Z + 8, TEMP0	
+	//add table entry for endpoint synch frame
+	ldi TEMP0, REQUEST_ENDPOINT_MASK_SYNCH_FRAME
+	std Z + 9, TEMP0										; store key=REQUEST_ENDPOINT_MASK_SYNCH_FRAME
+	ldi TEMP0, low(process_standard_endpoint_synch_frame_request)
+	std Z + 10, TEMP0										; store low byte of function address
+	ldi TEMP0, high(process_standard_endpoint_synch_frame_request)
+	std Z + 11, TEMP0
+
 	ctxswib
 	ret
-
 
 /****************************************************************************************
  * USB Endpoint Functions
@@ -852,9 +910,9 @@ handle_usb_setup_request:
 		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_DATAPTRL														
 		ldd TEMP2, Z + ENDPOINT_PIPE_OFFSET_DATAPTRH			; temp2:temp1 now holds the data pointer for the endpoint output pipe
 		movw X, TEMP2:TEMP1										; copy endpoint output pipe data pointer address in to Z
-		ld TEMP1, X												; load request type from data buffer *(ptr + 0)
+		ld TEMP1, X												; load request type from data buffer *(ptr + 0) = bmRequestType
 		adiw X, 1
-		ld TEMP2, X												; load function type from data buffer *(ptr + 1)
+		ld TEMP2, X												; load function type from data buffer *(ptr + 1) = bmRequest
 		
 		pushai low(REQUEST_TYPE_TABLE_START)
 		pushai high(REQUEST_TYPE_TABLE_START)
@@ -1055,7 +1113,109 @@ process_standard_device_set_address_request:
 process_standard_device_get_descriptor_request:
 	ctxswi
 	
-	lightson 0x00
+	popa TEMP0					; pop the endpoint number we're dealing with
+	coep TEMP0					; calculate output endpoint pointer and place it in Z
+	ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_DATAPTRL														
+	ldd TEMP2, Z + ENDPOINT_PIPE_OFFSET_DATAPTRH	
+	movw X, TEMP2:TEMP1			; X now holds the start address of the data buffer
+	adiw X, 2					
+	ld TEMP1, X					; load low byte of wValue from data buffer (contains the descriptor type)
+	adiw X, 1
+	ldi TEMP2, DEVICE_DESCRIPTOR_TYPE_STRING
+	and TEMP1, TEMP2
+	cp TEMP1, TEMP2
+	breq PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_STRING_REQUEST
+	jmp PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_CONFIGURATION_REQUEST
+
+
+	PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_CONFIGURATION_REQUEST:
+		//configure the response to send
+		ciep TEMP0
+		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_DATAPTRL														
+		ldd TEMP2, Z + ENDPOINT_PIPE_OFFSET_DATAPTRH
+		movw X, Z
+		//fill in response here
+		jmp PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_RETURN
+
+
+	//we need to handle this dynamically at some point e.g. string table
+	PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_STRING_REQUEST:
+		adiw X, 1
+		ld TEMP1, X				; load high byte of wValue from data buffer (contains the string index)
+		clr TEMP2
+		cp TEMP1, TEMP2			; do we need to send the supported languages?
+		breq PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_STRING_REQUEST_0
+		ldi TEMP2, 1
+		cp TEMP1, TEMP2
+		breq PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_STRING_REQUEST_1
+		jmp PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_RETURN
+
+		PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_STRING_REQUEST_0:
+			ciep TEMP0
+			ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_DATAPTRL														
+			ldd TEMP2, Z + ENDPOINT_PIPE_OFFSET_DATAPTRH
+			
+			//configure the response to send
+			movw X, Z
+			ldi TEMP1, 4
+			st X, TEMP1				; set the bLength to 4 bytes
+			adiw X, 1
+			ldi TEMP1, DEVICE_DESCRIPTOR_TYPE_STRING
+			st X, TEMP1				; set the bDescriptorType as string
+			adiw X, 1
+			ldi TEMP1, 0x09
+			st X, TEMP1				; set the low byte of the first language we support (US)
+			adiw X, 1
+			ldi TEMP1, 0x04
+			st X, TEMP1				; set the high byte of the first language we support (US)
+
+			//configure the in endpoint pipe to send the response
+			ldi TEMP1, 4
+			std Z + ENDPOINT_PIPE_OFFSET_CNTL, TEMP1
+			jmp PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_RETURN
+			clr TEMP1
+			std Z + ENDPOINT_PIPE_OFFSET_CNTH, TEMP1
+
+			jmp PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_RETURN
+
+		PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_STRING_REQUEST_1:
+			ciep TEMP0
+			ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_DATAPTRL														
+			ldd TEMP2, Z + ENDPOINT_PIPE_OFFSET_DATAPTRH
+			
+			//configure the response to send
+			movw X, Z
+			ldi TEMP1, 7
+			st X, TEMP1				; set the bLength to 7 bytes
+			adiw X, 1
+			ldi TEMP1, DEVICE_DESCRIPTOR_TYPE_STRING
+			st X, TEMP1				; set the bDescriptorType as string
+			adiw X, 1
+			ldi TEMP1, 'C'
+			st X, TEMP1
+			adiw X, 1
+			ldi TEMP1, 'H'
+			st X, TEMP1
+			adiw X, 1
+			ldi TEMP1, 'R'
+			st X, TEMP1
+			adiw X, 1
+			ldi TEMP1, 'I'
+			st X, TEMP1
+			adiw X, 1
+			ldi TEMP1, 'S'
+			st X, TEMP1
+
+			//configure the in endpoint pipe to send the response
+			ldi TEMP1, 7
+			std Z + ENDPOINT_PIPE_OFFSET_CNTL, TEMP1
+			jmp PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_RETURN
+			clr TEMP1
+			std Z + ENDPOINT_PIPE_OFFSET_CNTH, TEMP1
+
+			jmp PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_RETURN
+
+	PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_RETURN:
 
 	ctxswib
 	ret
@@ -1084,6 +1244,19 @@ process_standard_interface_get_interface_request:
 	ret
 
 process_standard_interface_set_interface_request:
+	ret
+
+//endpoint
+process_standard_endpoint_get_status_request:
+	ret
+
+process_standard_endpoint_clear_feature_request:
+	ret
+
+process_standard_endpoint_set_feature_request:
+	ret
+
+process_standard_endpoint_synch_frame_request:
 	ret
 
 /****************************************************************************************
