@@ -334,16 +334,20 @@ configure_heap:
 .equ DEVICE_DESCRIPTOR_DEVICE_CLASS = 0x02						; pretend we're (Communication Device Class) CDC based
 .equ DEVICE_DESCRIPTOR_DEVICE_SUB_CLASS = 0x00 
 .equ DEVICE_DESCRIPTOR_DEVICE_PROTOCOL = 0x00
-.equ DEVICE_DESCRIPTOR_MAX_PACKET_SIZE = 0x08
+.equ DEVICE_DESCRIPTOR_MAX_PACKET_SIZE = 0x20					; max packet size is 32 bytes
 .equ DEVICE_DESCRIPTOR_ID_VENDOR = 0x03EB						; pretend we're Atmel for now :)						
 .equ DEVICE_DESCRIPTOR_ID_PRODUCT = 0x2FE2						; set the Amtel product ID to be the A3BU Xplained board
 .equ DEVICE_DESCRIPTOR_BCD_DEVICE = 0x0100						; our product version is set at 1.0
-.equ DEVICE_DESCRIPTOR_MANUFACTURER = 0x00
-.equ DEVICE_DESCRIPTOR_PRODUCT = 0x00
-.equ DEVICE_DESCRIPTOR_SERIAL_NUMBER = 0x00
+.equ DEVICE_DESCRIPTOR_MANUFACTURER = 0x01
+.equ DEVICE_DESCRIPTOR_PRODUCT = 0x01
+.equ DEVICE_DESCRIPTOR_SERIAL_NUMBER = 0x01
 .equ DEVICE_DESCRIPTOR_NUM_CONFIGURATIONS = 0x01 
 
-.equ DEVICE_DESCRIPTOR_TYPE_STRING = 0b00000011
+.equ DESCRIPTOR_TYPE_DEVICE = 0b00000001
+.equ DESCRIPTOR_TYPE_CONFIGURATION = 0b00000010
+.equ DESCRIPTOR_TYPE_STRING = 0b00000011
+.equ DESCRIPTOR_TYPE_INTERFACE = 0b00000100
+.equ DESCRIPTOR_TYPE_ENDPOINT = 0b00000101
 
 //DEVICE_NAME: .db "Channing USB Device", 0
 
@@ -1114,109 +1118,204 @@ process_standard_device_get_descriptor_request:
 	ctxswi
 	
 	popa TEMP0					; pop the endpoint number we're dealing with
+
 	coep TEMP0					; calculate output endpoint pointer and place it in Z
 	ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_DATAPTRL														
 	ldd TEMP2, Z + ENDPOINT_PIPE_OFFSET_DATAPTRH	
 	movw X, TEMP2:TEMP1			; X now holds the start address of the data buffer
 	adiw X, 2					
-	ld TEMP1, X					; load low byte of wValue from data buffer (contains the descriptor type)
+	ld TEMP1, X					; load low byte of wValue from data buffer (contains the descriptor index)
 	adiw X, 1
-	ldi TEMP2, DEVICE_DESCRIPTOR_TYPE_STRING
-	and TEMP1, TEMP2
-	cp TEMP1, TEMP2
-	breq PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_STRING_REQUEST
-	jmp PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_CONFIGURATION_REQUEST
+	ld TEMP2, X					; load high byte of wValue from data buffer (contains the descriptor type)
 
+	//check for device descriptor
+	mov TEMP3, TEMP2
+	ldi TEMP4, DESCRIPTOR_TYPE_DEVICE
+	and TEMP3, TEMP4
+	cp TEMP3, TEMP4
+	breq HANDLE_GET_DESCRIPTOR_DEVICE_REQUEST
 
-	PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_CONFIGURATION_REQUEST:
-		//configure the response to send
-		ciep TEMP0
-		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_DATAPTRL														
-		ldd TEMP2, Z + ENDPOINT_PIPE_OFFSET_DATAPTRH
-		movw X, Z
-		//fill in response here
+	//check for string descriptor
+	mov TEMP3, TEMP2
+	ldi TEMP4, DESCRIPTOR_TYPE_STRING
+	and TEMP3, TEMP4
+	cp TEMP3, TEMP4
+	breq HANDLE_GET_DESCRIPTOR_STRING_REQUEST
+
+	jmp PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_RETURN			; if we get here then we don't support the descriptor request
+
+	HANDLE_GET_DESCRIPTOR_DEVICE_REQUEST:
+		pusha TEMP0
+		call process_standard_device_get_descriptor_device_request
 		jmp PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_RETURN
 
+	HANDLE_GET_DESCRIPTOR_CONFIGURATION_REQUEST:
+		jmp PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_RETURN
 
 	//we need to handle this dynamically at some point e.g. string table
-	PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_STRING_REQUEST:
-		adiw X, 1
-		ld TEMP1, X				; load high byte of wValue from data buffer (contains the string index)
-		clr TEMP2
-		cp TEMP1, TEMP2			; do we need to send the supported languages?
-		breq PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_STRING_REQUEST_0
-		ldi TEMP2, 1
-		cp TEMP1, TEMP2
-		breq PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_STRING_REQUEST_1
+	HANDLE_GET_DESCRIPTOR_STRING_REQUEST:
+		pusha TEMP1					; push the index
+		pusha TEMP0					; push the endpoint number
+		call process_standard_device_get_descriptor_string_request
 		jmp PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_RETURN
-
-		PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_STRING_REQUEST_0:
-			ciep TEMP0
-			ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_DATAPTRL														
-			ldd TEMP2, Z + ENDPOINT_PIPE_OFFSET_DATAPTRH
-			
-			//configure the response to send
-			movw X, Z
-			ldi TEMP1, 4
-			st X, TEMP1				; set the bLength to 4 bytes
-			adiw X, 1
-			ldi TEMP1, DEVICE_DESCRIPTOR_TYPE_STRING
-			st X, TEMP1				; set the bDescriptorType as string
-			adiw X, 1
-			ldi TEMP1, 0x09
-			st X, TEMP1				; set the low byte of the first language we support (US)
-			adiw X, 1
-			ldi TEMP1, 0x04
-			st X, TEMP1				; set the high byte of the first language we support (US)
-
-			//configure the in endpoint pipe to send the response
-			ldi TEMP1, 4
-			std Z + ENDPOINT_PIPE_OFFSET_CNTL, TEMP1
-			jmp PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_RETURN
-			clr TEMP1
-			std Z + ENDPOINT_PIPE_OFFSET_CNTH, TEMP1
-
-			jmp PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_RETURN
-
-		PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_STRING_REQUEST_1:
-			ciep TEMP0
-			ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_DATAPTRL														
-			ldd TEMP2, Z + ENDPOINT_PIPE_OFFSET_DATAPTRH
-			
-			//configure the response to send
-			movw X, Z
-			ldi TEMP1, 7
-			st X, TEMP1				; set the bLength to 7 bytes
-			adiw X, 1
-			ldi TEMP1, DEVICE_DESCRIPTOR_TYPE_STRING
-			st X, TEMP1				; set the bDescriptorType as string
-			adiw X, 1
-			ldi TEMP1, 'C'
-			st X, TEMP1
-			adiw X, 1
-			ldi TEMP1, 'H'
-			st X, TEMP1
-			adiw X, 1
-			ldi TEMP1, 'R'
-			st X, TEMP1
-			adiw X, 1
-			ldi TEMP1, 'I'
-			st X, TEMP1
-			adiw X, 1
-			ldi TEMP1, 'S'
-			st X, TEMP1
-
-			//configure the in endpoint pipe to send the response
-			ldi TEMP1, 7
-			std Z + ENDPOINT_PIPE_OFFSET_CNTL, TEMP1
-			jmp PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_RETURN
-			clr TEMP1
-			std Z + ENDPOINT_PIPE_OFFSET_CNTH, TEMP1
-
-			jmp PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_RETURN
 
 	PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_RETURN:
 
+	ctxswib
+	ret
+
+process_standard_device_get_descriptor_string_request:
+	ctxswi
+
+	popa TEMP0				; pop the endpoint number
+	popa TEMP1				; pop the string index number
+
+	clr TEMP2
+	cp TEMP1, TEMP2			; do we need to send the supported languages?
+	breq HANDLE_GET_DESCRIPTOR_STRING_REQUEST_0
+	ldi TEMP2, 1
+	cp TEMP1, TEMP2
+	breq HANDLE_GET_DESCRIPTOR_STRING_REQUEST_1
+	jmp PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_RETURN
+
+	HANDLE_GET_DESCRIPTOR_STRING_REQUEST_0:
+		ciep TEMP0
+		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_DATAPTRL														
+		ldd TEMP2, Z + ENDPOINT_PIPE_OFFSET_DATAPTRH
+			
+		//configure the response to send
+		movw X, Z
+		ldi TEMP1, 4
+		st X, TEMP1				; set the bLength to 4 bytes
+		adiw X, 1
+		ldi TEMP1, DESCRIPTOR_TYPE_STRING
+		st X, TEMP1				; set the bDescriptorType as string
+		adiw X, 1
+		ldi TEMP1, 0x09
+		st X, TEMP1				; set the low byte of the first language we support (US)
+		adiw X, 1
+		ldi TEMP1, 0x04
+		st X, TEMP1				; set the high byte of the first language we support (US)
+
+		//configure the in endpoint pipe to send the response
+		ldi TEMP1, 4
+		std Z + ENDPOINT_PIPE_OFFSET_CNTL, TEMP1
+		clr TEMP1
+		std Z + ENDPOINT_PIPE_OFFSET_CNTH, TEMP1
+
+		jmp PROCESS_STANDARD_DEVICE_GET_DESCRIPTOR_RETURN
+
+	HANDLE_GET_DESCRIPTOR_STRING_REQUEST_1:
+		ciep TEMP0
+		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_DATAPTRL														
+		ldd TEMP2, Z + ENDPOINT_PIPE_OFFSET_DATAPTRH
+			
+		//configure the response to send
+		movw X, Z
+		ldi TEMP1, 7
+		st X, TEMP1				; set the bLength to 7 bytes
+		adiw X, 1
+		ldi TEMP1, DESCRIPTOR_TYPE_STRING
+		st X, TEMP1				; set the bDescriptorType as string
+		adiw X, 1
+		ldi TEMP1, 'C'
+		st X, TEMP1
+		adiw X, 1
+		ldi TEMP1, 'H'
+		st X, TEMP1
+		adiw X, 1
+		ldi TEMP1, 'R'
+		st X, TEMP1
+		adiw X, 1
+		ldi TEMP1, 'I'
+		st X, TEMP1
+		adiw X, 1
+		ldi TEMP1, 'S'
+		st X, TEMP1
+
+		//configure the in endpoint pipe to send the response
+		ldi TEMP1, 7
+		std Z + ENDPOINT_PIPE_OFFSET_CNTL, TEMP1
+		clr TEMP1
+		std Z + ENDPOINT_PIPE_OFFSET_CNTH, TEMP1
+
+	ctxswib
+	ret
+
+process_standard_device_get_descriptor_device_request:
+	ctxswi
+
+	popa TEMP0										; pop the endpoint number
+
+	lightson 0x00
+
+	ciep TEMP0
+	ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_DATAPTRL														
+	ldd TEMP2, Z + ENDPOINT_PIPE_OFFSET_DATAPTRH		
+	movw X, TEMP2:TEMP1			; X now holds the start address of the data buffer
+
+	//configure the response to send
+	ldi TEMP1, DEVICE_DESCRIPTOR_LENGTH					; set bLength
+	st X, TEMP1
+	adiw X, 1
+	ldi TEMP1, DESCRIPTOR_TYPE_DEVICE					; set bDescriptorType
+	st X,TEMP1
+	adiw X, 1
+	ldi TEMP1, low(DEVICE_DESCRIPTOR_BCD_USB)
+	st X, TEMP1											; set low byte of bcdUSB
+	adiw X, 1
+	ldi TEMP1, high(DEVICE_DESCRIPTOR_BCD_USB)			
+	st X, TEMP1											; set high byte of bcdUSB
+	adiw X, 1
+	ldi TEMP1, DEVICE_DESCRIPTOR_DEVICE_CLASS
+	st X, TEMP1											; set bDeviceClass
+	adiw X, 1											
+	ldi TEMP1, DEVICE_DESCRIPTOR_DEVICE_SUB_CLASS
+	st X, TEMP1											; set bDeviceSubClass
+	adiw X, 1
+	ldi TEMP1, DEVICE_DESCRIPTOR_DEVICE_PROTOCOL
+	st X, TEMP1											; set bDeviceProtocol
+	adiw X, 1
+	ldi TEMP1, DEVICE_DESCRIPTOR_MAX_PACKET_SIZE
+	st X, TEMP1											; set bMaxPacketSize
+	adiw X, 1
+	ldi TEMP1, low(DEVICE_DESCRIPTOR_ID_VENDOR)
+	st X, TEMP1											; set low byte of idVendor
+	adiw X, 1
+	ldi TEMP1, high(DEVICE_DESCRIPTOR_ID_VENDOR)		
+	st X, TEMP1											; set high byte of idVendor
+	adiw X, 1
+	ldi TEMP1, low(DEVICE_DESCRIPTOR_ID_PRODUCT)
+	st X, TEMP1											; set low byte of idProduct
+	adiw X, 1
+	ldi TEMP1, high(DEVICE_DESCRIPTOR_ID_PRODUCT)
+	st X, TEMP1											; set high byte of idProduct
+	adiw X, 1
+	ldi TEMP1, low(DEVICE_DESCRIPTOR_BCD_DEVICE)
+	st X, TEMP1											; set low byte of bcdDevice
+	adiw X, 1
+	ldi TEMP1, high(DEVICE_DESCRIPTOR_BCD_DEVICE)
+	st X, TEMP1											; set high byte of bcdDevice
+	adiw X, 1
+	ldi TEMP1, DEVICE_DESCRIPTOR_MANUFACTURER
+	st X, TEMP1											; set iManufacturer
+	adiw X, 1
+	ldi TEMP1, DEVICE_DESCRIPTOR_PRODUCT
+	st X, TEMP1											; set iProduct
+	adiw X, 1
+	ldi TEMP1, DEVICE_DESCRIPTOR_SERIAL_NUMBER
+	st X, TEMP1											; set iSerialNumber
+	adiw X, 1
+	ldi TEMP1, DEVICE_DESCRIPTOR_NUM_CONFIGURATIONS
+	st X, TEMP1											; set bNumConfigurations
+
+	//configure the in endpoint pipe to send the response
+	ldi TEMP1, DEVICE_DESCRIPTOR_LENGTH
+	std Z + ENDPOINT_PIPE_OFFSET_CNTL, TEMP1
+	clr TEMP1
+	std Z + ENDPOINT_PIPE_OFFSET_CNTH, TEMP1
+	std Z + ENDPOINT_PIPE_OFFSET_AUXDATAL, TEMP1
+	std z + ENDPOINT_PIPE_OFFSET_AUXDATAH, TEMP1
 	ctxswib
 	ret
 
