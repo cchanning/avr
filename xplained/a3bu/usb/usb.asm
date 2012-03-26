@@ -933,7 +933,14 @@ handle_usb_setup_request:
 		//invoke the handling function
 		pusha TEMP0												; push the endpoint number
 		icall													; call our function (address stored in Z)
-
+		coep TEMP0												; calculate the start address of the output pipe for the endpoint number
+		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_STATUS				; load current output pipe status
+		ori TEMP1, 0b00110010									; the manual says to write 1's to clear but this is clearly wrong...hmmm								
+		std Z + ENDPOINT_PIPE_OFFSET_STATUS, TEMP1				; reset txn/setup/busnack0 interrupt flags
+		ciep TEMP0
+		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_STATUS				; load current output pipe status
+		andi TEMP1, 0b11001101									; the manual says to write 1's to clear but this is clearly wrong...hmmm								
+		std Z + ENDPOINT_PIPE_OFFSET_STATUS, TEMP1				; reset txn/setup/busnack0 interrupt flags
 
 		HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP_CONTINUE:
 		inc TEMP0
@@ -1106,6 +1113,11 @@ process_standard_device_set_feature_request:
 	ret
 
 process_standard_device_set_address_request:
+	ctxswi
+
+	lightson 0x00
+
+	ctxswib
 	ret
 
 /**
@@ -1247,8 +1259,6 @@ process_standard_device_get_descriptor_device_request:
 
 	popa TEMP0										; pop the endpoint number
 
-	lightson 0x00
-
 	ciep TEMP0
 	ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_DATAPTRL														
 	ldd TEMP2, Z + ENDPOINT_PIPE_OFFSET_DATAPTRH		
@@ -1312,7 +1322,7 @@ process_standard_device_get_descriptor_device_request:
 	//configure the in endpoint pipe to send the response
 	ldi TEMP1, DEVICE_DESCRIPTOR_LENGTH
 	std Z + ENDPOINT_PIPE_OFFSET_CNTL, TEMP1
-	clr TEMP1
+	ldi TEMP1, 0b10000000								; set the auto zlp flag
 	std Z + ENDPOINT_PIPE_OFFSET_CNTH, TEMP1
 	std Z + ENDPOINT_PIPE_OFFSET_AUXDATAL, TEMP1
 	std z + ENDPOINT_PIPE_OFFSET_AUXDATAH, TEMP1
