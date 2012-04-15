@@ -201,8 +201,10 @@ configure_heap:
  * USB Endpoint
  *********************************************************************************************/
 
+.equ USB_DEFERRED_ADDRESS = APPLICATION_HEAP_START + APPLICATION_HEAP_SIZE		; needed as the setAddress request is delayed until the ZLP has been ACK'd by the host controller (annoying)
+
 .equ ENDPOINT_COUNT = 2 ; Each endpoint has two pipes (OUT/IN)
-.equ ENDPOINT_CFG_TBL_START = APPLICATION_HEAP_START + APPLICATION_HEAP_SIZE
+.equ ENDPOINT_CFG_TBL_START = USB_DEFERRED_ADDRESS + 2
 .equ ENDPOINT_START = ENDPOINT_CFG_TBL_START //in the future FIFO maybe enabled meaning the ENDPOINT_START is further from the cfg table start
 
 .equ ENDPOINT_PIPE_OFFSET_STATUS = 0
@@ -217,8 +219,8 @@ configure_heap:
 .equ ENDPOINT_PIPE_MASK_TYPE_CONTROL = 0b01000000
 .equ ENDPOINT_PIPE_MASK_TYPE_BULK = 0b10000000
 
-.equ ENDPOINT_PIPE_MASK_BUFFER_SIZE_32 = 0b00000010
-.equ ENDPOINT_PIPE_BUFFER_SIZE = 32
+.equ ENDPOINT_PIPE_MASK_BUFFER_SIZE_64 = 0b00000010
+.equ ENDPOINT_PIPE_BUFFER_SIZE = 64
 
 /*
  * This macro will calculate and store in register Z the start address of the output pipe for the supplied endpoint.
@@ -331,16 +333,16 @@ configure_heap:
 .equ DEVICE_DESCRIPTOR_LENGTH = 0x12							; 18 bytes long
 .equ DEVICE_DESCRIPTOR_TYPE = 0x01								; device descriptor
 .equ DEVICE_DESCRIPTOR_BCD_USB = 0x0200							; support for USB 2.0 
-.equ DEVICE_DESCRIPTOR_DEVICE_CLASS = 0x02						; pretend we're (Communication Device Class) CDC based
+.equ DEVICE_DESCRIPTOR_DEVICE_CLASS = 0x00						; in the future we need to pretend we're a HID
 .equ DEVICE_DESCRIPTOR_DEVICE_SUB_CLASS = 0x00 
 .equ DEVICE_DESCRIPTOR_DEVICE_PROTOCOL = 0x00
-.equ DEVICE_DESCRIPTOR_MAX_PACKET_SIZE = 0x20					; max packet size is 32 bytes
+.equ DEVICE_DESCRIPTOR_MAX_PACKET_SIZE = 0x40					; max packet size is 64 bytes
 .equ DEVICE_DESCRIPTOR_ID_VENDOR = 0x03EB						; pretend we're Atmel for now :)						
 .equ DEVICE_DESCRIPTOR_ID_PRODUCT = 0x2FE2						; set the Amtel product ID to be the A3BU Xplained board
-.equ DEVICE_DESCRIPTOR_BCD_DEVICE = 0x0100						; our product version is set at 1.0
+.equ DEVICE_DESCRIPTOR_BCD_DEVICE = 0x0002						; our product version is set at 0.02
 .equ DEVICE_DESCRIPTOR_MANUFACTURER = 0x01
 .equ DEVICE_DESCRIPTOR_PRODUCT = 0x01
-.equ DEVICE_DESCRIPTOR_SERIAL_NUMBER = 0x01
+.equ DEVICE_DESCRIPTOR_SERIAL_NUMBER = 0x00
 .equ DEVICE_DESCRIPTOR_NUM_CONFIGURATIONS = 0x01 
 
 .equ DESCRIPTOR_TYPE_DEVICE = 0b00000001
@@ -357,17 +359,17 @@ configure_heap:
 
 /*
  * By default the system clock will be using the 2Mhz internal oscillator (after hardware reset). This function will cause the PLL to 
- * be configured as the system clock source. Prescaler A will be configured to reduce the output from the PLL to 12Mhz rather than 48Mhz.
+ * be configured as the system clock source. Prescaler A will be configured to reduce the output from the PLL to 24Mhz rather than 48Mhz.
  */
 configure_system_clock:
 	ctxswi
 	
 	call configure_32mhz_int_osc								; make sure the 32Mhz internal oscillator is configured and is stable for use
 	call configure_pll											; configure the PLL
-	ldi TEMP0, 0b00001100
+	ldi TEMP0, 0b00000100
 	ldi TEMP1, CCP_IOREG_gc
 	sts CPU_CCP, TEMP1											; temporarily turn off change control protection (automatically switched back on after 4 cycles)
-	sts CLK_PSCTRL, TEMP0										; set prescaler A to div by 4, disable prescalers C/B (CPU etc will run at 12Mhz)
+	sts CLK_PSCTRL, TEMP0										; set prescaler A to div by 2, disable prescalers C/B (CPU etc will run at 24Mhz)
 	ldi TEMP0, 0b00000100
 	sts CPU_CCP, TEMP1											; temporarily turn off change control protection (automatically switched back on after 4 cycles)
 	sts CLK_CTRL, TEMP0											; set the clock source as PLL
@@ -852,7 +854,7 @@ configure_usb_endpoint_pipe:
 	clr TEMP0							
 	std Z + ENDPOINT_PIPE_OFFSET_STATUS, TEMP0
 	popa TEMP0													; pop the type of endpoint to use from the application stack
-	ori TEMP0, ENDPOINT_PIPE_MASK_BUFFER_SIZE_32				; set the buffer size for the endpoint
+	ori TEMP0, ENDPOINT_PIPE_MASK_BUFFER_SIZE_64				; set the buffer size for the endpoint
 	std Z + ENDPOINT_PIPE_OFFSET_CTRL, TEMP0
 	clr TEMP0
 	std Z + ENDPOINT_PIPE_OFFSET_CNTL, TEMP0
@@ -910,6 +912,16 @@ handle_usb_setup_request:
 		cpse TEMP1, TEMP2										; if the endpoint hasn't had a SETUP txn complete, continue in the loop. If it has, the jmp instruction is skipped
 		jmp HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP_CONTINUE
 
+		//make sure we NAK until we're ready to process requests for this EP
+		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_STATUS
+		ori TEMP1, 0b11000110
+		std Z + ENDPOINT_PIPE_OFFSET_STATUS, TEMP1
+		ciep TEMP0
+		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_STATUS
+		ori TEMP1, 0b11000110
+		std Z + ENDPOINT_PIPE_OFFSET_STATUS, TEMP1
+		coep TEMP0
+
 		//fetch the data pointer for the endpoint pipe
 		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_DATAPTRL														
 		ldd TEMP2, Z + ENDPOINT_PIPE_OFFSET_DATAPTRH			; temp2:temp1 now holds the data pointer for the endpoint output pipe
@@ -935,13 +947,15 @@ handle_usb_setup_request:
 		icall													; call our function (address stored in Z)
 		coep TEMP0												; calculate the start address of the output pipe for the endpoint number
 		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_STATUS				; load current output pipe status
-		ldi TEMP2, 0b11110110
-		eor TEMP1, TEMP2								; the manual says to write 1's to clear but this is clearly wrong...hmmm								
+		ldi TEMP2, 0b11110110									; load the bitmask to clear
+		com TEMP2
+		and TEMP1, TEMP2										; the manual says to write 1's to clear but this is clearly wrong...hmmm								
 		std Z + ENDPOINT_PIPE_OFFSET_STATUS, TEMP1				; reset txn/setup/busnack0 interrupt flags
 		ciep TEMP0
 		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_STATUS				; load current output pipe status
-		ldi TEMP2, 0b11110110
-		eor TEMP1, TEMP2									; the manual says to write 1's to clear but this is clearly wrong...hmmm								
+		ldi TEMP2, 0b11110110									; load the bitmask to clear
+		com TEMP2
+		and TEMP1, TEMP2										; the manual says to write 1's to clear but this is clearly wrong...hmmm								
 		std Z + ENDPOINT_PIPE_OFFSET_STATUS, TEMP1				; reset txn/setup/busnack0 interrupt flags
 
 		HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP_CONTINUE:
@@ -1072,7 +1086,57 @@ resolve_usb_request_to_function_table:
 
 handle_usb_io_request:
 	ctxswi
-	ctxswib
+
+	ldi TEMP0, 0												; initialize the endpoint counter
+
+	//loop through all endpoints
+	HANDLE_USB_IO_REQUEST_ENDPOINT_LOOP:
+		
+		ciep TEMP0												; we only care about input pipes atm
+
+		//check if the endpoints status register reflects the txn
+		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_STATUS				; load status of the pipe into register
+		ldi TEMP2, 0b00100000
+		and TEMP1, TEMP2										; bitwise "and" with bitmask to check if the endpoint is reporting a I/O txn completing
+		cpse TEMP1, TEMP2										; if the endpoint hasn't had a txn complete, continue in the loop. If it has, the jmp instruction is skipped
+		jmp HANDLE_USB_IO_REQUEST_ENDPOINT_LOOP_CONTINUE
+
+		//make sure we NAK until we're ready to process requests for this EP
+		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_STATUS
+		ori TEMP1, 0b11000110
+		std Z + ENDPOINT_PIPE_OFFSET_STATUS, TEMP1
+		ciep TEMP0
+		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_STATUS
+		ori TEMP1, 0b11000110
+		std Z + ENDPOINT_PIPE_OFFSET_STATUS, TEMP1
+		coep TEMP0
+
+		ldi TEMP1, 0b10000000									; set the auto zlp flag
+		std Z + ENDPOINT_PIPE_OFFSET_CNTH, TEMP1
+		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_STATUS				; load current output pipe status
+		ldi TEMP2, 0b11110110
+		com TEMP2
+		and TEMP1, TEMP2										; the manual says to write 1's to clear but this is clearly wrong...hmmm								
+		std Z + ENDPOINT_PIPE_OFFSET_STATUS, TEMP1				; reset txn/setup/busnack0 interrupt flags
+		lightson 0x01
+		
+		HANDLE_USB_IO_REQUEST_ENDPOINT_LOOP_CONTINUE:
+			inc TEMP0
+			ldi TEMP1, ENDPOINT_COUNT
+			cpse TEMP0, TEMP1
+			jmp HANDLE_USB_IO_REQUEST_ENDPOINT_LOOP
+
+
+	lds TEMP0, USB_DEFERRED_ADDRESS
+	cpi TEMP0, 0
+	brne HANDLE_USB_DEFERRED_ADDRESS
+	jmp HANDLE_USB_IO_REQUEST_RETURN
+
+	HANDLE_USB_DEFERRED_ADDRESS:
+		call process_standard_device_set_address_deferred_request
+
+	HANDLE_USB_IO_REQUEST_RETURN:
+		ctxswib
 	ret
 
 handle_usb_bus_event:
@@ -1125,10 +1189,32 @@ process_standard_device_set_address_request:
 	movw X, TEMP2:TEMP1			; X now holds the start address of the data buffer
 	adiw X, 2					
 	ld TEMP1, X					; load low byte of wValue from data buffer (we only need the low byte here as a USB device address is only 7 bits wide)
-	sts USB_ADDR, TEMP1
-	lightson 0x00
+	sts USB_DEFERRED_ADDRESS, TEMP1
+
+	//configure the in endpoint pipe to send the response
+	ciep TEMP0
+	ldi TEMP1, 0
+	std Z + ENDPOINT_PIPE_OFFSET_CNTL, TEMP1
+	ldi TEMP1, 0b10000000								; set the auto zlp flag
+	std Z + ENDPOINT_PIPE_OFFSET_CNTH, TEMP1
+	ldi TEMP1, 0
+	std Z + ENDPOINT_PIPE_OFFSET_AUXDATAL, TEMP1
+	std z + ENDPOINT_PIPE_OFFSET_AUXDATAH, TEMP1
+
 	ctxswib
 	ret
+
+process_standard_device_set_address_deferred_request:
+	ctxswi
+
+	lds TEMP1, USB_DEFERRED_ADDRESS
+	sts USB_ADDR, TEMP1
+	ldi TEMP1, 0
+	sts USB_DEFERRED_ADDRESS, TEMP1
+
+	ctxswib
+	ret
+
 
 /**
  * Sets up the input databuffer with the device descriptor
@@ -1334,6 +1420,7 @@ process_standard_device_get_descriptor_device_request:
 	std Z + ENDPOINT_PIPE_OFFSET_CNTL, TEMP1
 	ldi TEMP1, 0b10000000								; set the auto zlp flag
 	std Z + ENDPOINT_PIPE_OFFSET_CNTH, TEMP1
+	ldi TEMP1, 0
 	std Z + ENDPOINT_PIPE_OFFSET_AUXDATAL, TEMP1
 	std z + ENDPOINT_PIPE_OFFSET_AUXDATAH, TEMP1
 	ctxswib
