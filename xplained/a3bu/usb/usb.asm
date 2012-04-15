@@ -935,11 +935,13 @@ handle_usb_setup_request:
 		icall													; call our function (address stored in Z)
 		coep TEMP0												; calculate the start address of the output pipe for the endpoint number
 		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_STATUS				; load current output pipe status
-		ori TEMP1, 0b00110010									; the manual says to write 1's to clear but this is clearly wrong...hmmm								
+		ldi TEMP2, 0b11110110
+		eor TEMP1, TEMP2								; the manual says to write 1's to clear but this is clearly wrong...hmmm								
 		std Z + ENDPOINT_PIPE_OFFSET_STATUS, TEMP1				; reset txn/setup/busnack0 interrupt flags
 		ciep TEMP0
 		ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_STATUS				; load current output pipe status
-		andi TEMP1, 0b11001101									; the manual says to write 1's to clear but this is clearly wrong...hmmm								
+		ldi TEMP2, 0b11110110
+		eor TEMP1, TEMP2									; the manual says to write 1's to clear but this is clearly wrong...hmmm								
 		std Z + ENDPOINT_PIPE_OFFSET_STATUS, TEMP1				; reset txn/setup/busnack0 interrupt flags
 
 		HANDLE_USB_SETUP_REQUEST_ENDPOINT_LOOP_CONTINUE:
@@ -1115,8 +1117,16 @@ process_standard_device_set_feature_request:
 process_standard_device_set_address_request:
 	ctxswi
 
-	lightson 0x00
+	popa TEMP0					; pop the endpoint number we're dealing with
 
+	coep TEMP0					; calculate output endpoint pointer and place it in Z
+	ldd TEMP1, Z + ENDPOINT_PIPE_OFFSET_DATAPTRL														
+	ldd TEMP2, Z + ENDPOINT_PIPE_OFFSET_DATAPTRH	
+	movw X, TEMP2:TEMP1			; X now holds the start address of the data buffer
+	adiw X, 2					
+	ld TEMP1, X					; load low byte of wValue from data buffer (we only need the low byte here as a USB device address is only 7 bits wide)
+	sts USB_ADDR, TEMP1
+	lightson 0x00
 	ctxswib
 	ret
 
