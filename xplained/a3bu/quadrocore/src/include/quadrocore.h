@@ -4,6 +4,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-
+#include "clock.h"
+#include "cpu.h"
 
 #endif /* QUADROCORE_H_ */

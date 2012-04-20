@@ -58,6 +58,12 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="include\clock.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\cpu.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="include\quadrocore.h">
       <SubType>compile</SubType>
     </Compile>
