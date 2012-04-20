@@ -12,7 +12,9 @@ bool USBModuleInit(short endpointCount, uint8_t endpointBufferSize)
 	//set the USB module EPPTR register (so it will know where the endpoint configuration lives)
 	USB.EPPTR = (word_t)usbEndpointTableP->usbEndpointP;
 	
-	//TODO: prod row setup etc
+	//load the USB calibration data from the device production row into the USB calibration registers
+	USB.CAL0 = ReadCalibrationByte(USB_CAL0);
+	USB.CAL1 = ReadCalibrationByte(USB_CAL1);
 	
 	// set the PLL as the USB clock source, enable the USB clock source (start feeding the USB module clock signals)
 	CLK.USBCTRL = CLK_USBSRC_PLL_gc | CLK_USBSEN_bm;
