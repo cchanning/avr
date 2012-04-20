@@ -32,7 +32,7 @@ bool PLLInit(void)
 	//enable the PLL
 	OSC.CTRL |= OSC_PLLEN_bm;
 	
-	while (OSC_PLLEN_bm != (OSC.STATUS & OSC_PLLEN_bm))
+	while (OSC_PLLRDY_bm != (OSC.STATUS & OSC_PLLRDY_bm))
 	{
 		//wait until the PLL has stabilized	
 	}
