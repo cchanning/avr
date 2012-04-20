@@ -2,6 +2,7 @@
 
 int main(void)
 {
+	SystemClockInit();
 	USBModuleInit(1, 32);
 	
 	for ( ; ; );

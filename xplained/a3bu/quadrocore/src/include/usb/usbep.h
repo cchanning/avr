@@ -23,8 +23,8 @@ typedef enum _EndpointDirection
 	IN
 } EndpointDirection;
 
-USBEndpointTable_t* USBEndpointTableAlloc(short endpointCount, uint8_t endpointBufferSize);
 
+USBEndpointTable_t* USBEndpointTableAlloc(short endpointCount, uint8_t endpointBufferSize);
 USBEndpoint_t* USBEndpointGet(USBEndpointTable_t *usbEndpointTableP, uint8_t endpointNumber, EndpointDirection endpointDirection);
 
 

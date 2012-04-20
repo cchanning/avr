@@ -1,12 +1,9 @@
 #ifndef CLOCK_H_
 #define CLOCK_H_
 
+#include "type.h"
 
-void EnableR32Oscillator(void);
-
-void EnablePLL(void);
-
-void EnableSystemClock(void);
+bool SystemClockInit(void);
 
 
 #endif /* CLOCK_H_ */
