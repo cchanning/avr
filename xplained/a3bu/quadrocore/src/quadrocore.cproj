@@ -73,7 +73,10 @@
     <Compile Include="include\type.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\usb.h">
+    <Compile Include="include\usb\usb.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\usb\usbep.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="quadrocore.c">
@@ -82,9 +85,13 @@
     <Compile Include="usb.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="usbep.c">
+      <SubType>compile</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="include" />
+    <Folder Include="include\usb" />
   </ItemGroup>
   <ItemGroup>
     <None Include="usb.asm">

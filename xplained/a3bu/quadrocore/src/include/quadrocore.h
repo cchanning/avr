@@ -9,6 +9,7 @@
 
 #include "clock.h"
 #include "cpu.h"
-#include "usb.h"
+#include "usb/usb.h"
+#include "usb/usbep.h"
 
 #endif /* QUADROCORE_H_ */
