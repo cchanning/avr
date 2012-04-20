@@ -58,6 +58,9 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="clock.c">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="include\clock.h">
       <SubType>compile</SubType>
     </Compile>
@@ -67,12 +70,26 @@
     <Compile Include="include\quadrocore.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="include\type.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\usb.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="quadrocore.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="usb.c">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="include" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="usb.asm">
+      <SubType>compile</SubType>
+    </None>
   </ItemGroup>
   <Import Project="$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets" />
 </Project>
