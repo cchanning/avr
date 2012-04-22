@@ -10,6 +10,7 @@
 
 #include "clock.h"
 #include "cpu.h"
+#include "type.h"
 #include "usb/usb.h"
 #include "usb/usbep.h"
 

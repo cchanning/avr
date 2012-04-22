@@ -26,7 +26,7 @@ bool PLLInit(void)
 		return false;
 	}
 	
-	//set the PLL source as the R32 internal osc. and set the multiplier as 6 (scales up to 48mhz for the USB module)
+	// set the PLL source as the R32 internal osc. and set the multiplier as 6 (scales up to 48mhz for the USB module)
 	OSC.PLLCTRL |= OSC_PLLSRC_RC32M_gc | 0x06;
 	
 	//enable the PLL

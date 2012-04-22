@@ -2,8 +2,18 @@
 
 int main(void)
 {
+	USBConfiguration_t usbConfiguration = 
+	{
+		.usbEndpointTableConfiguration = 
+		{
+			.endpointCount = 1,
+			.endpointBufferSize = 32,
+			.endpointType[0] = USB_EP_TYPE_CONTROL_gc
+		}
+	};
+	
 	SystemClockInit();
-	USBModuleInit(1, 32);
+	USBModuleInit(&usbConfiguration);
 	
 	for ( ; ; );
 	

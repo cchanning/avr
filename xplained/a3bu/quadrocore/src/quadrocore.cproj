@@ -53,15 +53,15 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <ToolchainSettings>
       <AvrGcc>
-        <avrgcc.compiler.directories.IncludePaths>
-          <ListValues>
-            <Value>../include</Value>
-          </ListValues>
-        </avrgcc.compiler.directories.IncludePaths>
-        <avrgcc.compiler.optimization.DebugLevel>Maximum (-g3)</avrgcc.compiler.optimization.DebugLevel>
-        <avrgcc.compiler.miscellaneous.Verbose>True</avrgcc.compiler.miscellaneous.Verbose>
-        <avrgcc.assembler.debugging.DebugLevel>Maximum (-Wa,-g3)</avrgcc.assembler.debugging.DebugLevel>
-      </AvrGcc>
+  <avrgcc.compiler.directories.IncludePaths>
+    <ListValues>
+      <Value>../include</Value>
+    </ListValues>
+  </avrgcc.compiler.directories.IncludePaths>
+  <avrgcc.compiler.optimization.DebugLevel>Maximum (-g3)</avrgcc.compiler.optimization.DebugLevel>
+  <avrgcc.compiler.miscellaneous.Verbose>True</avrgcc.compiler.miscellaneous.Verbose>
+  <avrgcc.assembler.debugging.DebugLevel>Maximum (-Wa,-g3)</avrgcc.assembler.debugging.DebugLevel>
+</AvrGcc>
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
@@ -77,9 +77,6 @@
     <Compile Include="include\cpu.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\progmem.h">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="include\quadrocore.h">
       <SubType>compile</SubType>
     </Compile>
@@ -90,9 +87,6 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="include\usb\usbep.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="progmem.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="quadrocore.c">
