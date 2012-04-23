@@ -14,6 +14,8 @@ int main(void)
 	
 	SystemClockInit();
 	USBModuleInit(&usbConfiguration);
+	SetPMICLevel(PMIC_HILVLEN_bm);
+	EnableGlobalInterrupts();
 	
 	for ( ; ; );
 	

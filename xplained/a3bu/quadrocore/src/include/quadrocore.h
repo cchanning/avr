@@ -10,8 +10,10 @@
 
 #include "clock.h"
 #include "cpu.h"
+#include "interrupt.h"
 #include "type.h"
 #include "usb/usb.h"
+#include "usb/usbdev.h"
 #include "usb/usbep.h"
 
 #endif /* QUADROCORE_H_ */

@@ -1,5 +1,7 @@
 #include "quadrocore.h"
 
+static USBEndpointTable_t *usbEndpointTableP = NULL;
+
 void USBEndpointReset(USBEndpoint_t *usbEndpointP, uint8_t endpointBufferSize, uint8_t endpointType)
 {
 	if (! usbEndpointP)
@@ -13,7 +15,7 @@ void USBEndpointReset(USBEndpoint_t *usbEndpointP, uint8_t endpointBufferSize, u
 	usbEndpointP->auxData = 0;
 	
 	// zero out the data buffer
-	for (uint8_t *dataBufferP = usbEndpointP->dataBufferP; dataBufferP < (usbEndpointP->dataBufferP) + endpointBufferSize; dataBufferP++)
+	for (volatile uint8_t *dataBufferP = usbEndpointP->dataBufferP; dataBufferP < (usbEndpointP->dataBufferP) + endpointBufferSize; dataBufferP++)
 	{
 		*dataBufferP = 0;
 	}
@@ -55,7 +57,7 @@ void USBEndpointFree(USBEndpoint_t *usbEndpointP)
 	usbEndpointP->dataBufferP = NULL;
 }
 
-void USBEndpointTableFree(USBEndpointTable_t *usbEndpointTableP)
+void USBEndpointTableFree(void)
 {
 	if (! usbEndpointTableP)
 	{
@@ -68,30 +70,40 @@ void USBEndpointTableFree(USBEndpointTable_t *usbEndpointTableP)
 		
 		for (endpointNumber = 0; endpointNumber < usbEndpointTableP->usbEndpointTableConfigurationP->endpointCount; endpointNumber++)
 		{
-			USBEndpointFree(USBEndpointGet(usbEndpointTableP, endpointNumber, OUT));
-			USBEndpointFree(USBEndpointGet(usbEndpointTableP, endpointNumber, IN));
+			USBEndpointFree(USBEndpointGet(endpointNumber, OUT));
+			USBEndpointFree(USBEndpointGet(endpointNumber, IN));
 		}
 		
 		free(usbEndpointTableP->baseP);
 	}
 	
 	free(usbEndpointTableP);
+	usbEndpointTableP = NULL;
 }
 
-USBEndpointTable_t* USBEndpointTableAlloc(USBEndpointTableConfiguration_t *usbEndpointTableConfigurationP)
+USBEndpointTable_t* USBEndpointTableGet(void)
 {
-	USBEndpointTable_t *usbEndpointTableP = NULL;
+	return usbEndpointTableP;
+}
+
+bool USBEndpointTableAlloc(USBEndpointTableConfiguration_t *usbEndpointTableConfigurationP)
+{
 	const uint8_t FIFO_SIZE = (usbEndpointTableConfigurationP->endpointCount + 1) * 4;
 	const uint16_t ENDPOINT_TABLE_SIZE = (sizeof(USBEndpoint_t) * 2) ;
 		
+	if (usbEndpointTableP)
+	{
+		return true;
+	}		
+	
 	if (usbEndpointTableConfigurationP->endpointCount <= 0)
 	{
-		return NULL;
+		return false;
 	}
 			
 	if (! (usbEndpointTableP = calloc(1, sizeof(USBEndpointTable_t))))
 	{
-		return NULL;
+		return false;
 	}	
 				
 	usbEndpointTableP->usbEndpointTableConfigurationP = usbEndpointTableConfigurationP;
@@ -104,8 +116,8 @@ USBEndpointTable_t* USBEndpointTableAlloc(USBEndpointTableConfiguration_t *usbEn
 	 */
 	if (! (usbEndpointTableP->baseP = calloc(usbEndpointTableConfigurationP->endpointCount, FIFO_SIZE + ENDPOINT_TABLE_SIZE)))
 	{
-		USBEndpointTableFree(usbEndpointTableP);
-		return NULL;
+		USBEndpointTableFree();
+		return false;
 	}
 	
 	usbEndpointTableP->fifoP = usbEndpointTableP->baseP;
@@ -113,18 +125,18 @@ USBEndpointTable_t* USBEndpointTableAlloc(USBEndpointTableConfiguration_t *usbEn
 			
 	for (uint8_t endpointNumber = 0; endpointNumber < usbEndpointTableConfigurationP->endpointCount; endpointNumber++)
 	{
-		if ((! USBEndpointInit(USBEndpointGet(usbEndpointTableP, endpointNumber, OUT), usbEndpointTableConfigurationP->endpointBufferSize, usbEndpointTableConfigurationP->endpointType[endpointNumber]))
-			|| (! USBEndpointInit(USBEndpointGet(usbEndpointTableP, endpointNumber, IN), usbEndpointTableConfigurationP->endpointBufferSize, usbEndpointTableConfigurationP->endpointType[endpointNumber])))
+		if ((! USBEndpointInit(USBEndpointGet(endpointNumber, OUT), usbEndpointTableConfigurationP->endpointBufferSize, usbEndpointTableConfigurationP->endpointType[endpointNumber]))
+			|| (! USBEndpointInit(USBEndpointGet(endpointNumber, IN), usbEndpointTableConfigurationP->endpointBufferSize, usbEndpointTableConfigurationP->endpointType[endpointNumber])))
 		{
-				USBEndpointTableFree(usbEndpointTableP);
-				return NULL;
+				USBEndpointTableFree();
+				return false;
 		}
 	}						
 	
 	return usbEndpointTableP;
 }
 
-USBEndpoint_t* USBEndpointGet(USBEndpointTable_t *usbEndpointTableP, uint8_t endpointNumber, EndpointDirection endpointDirection)
+USBEndpoint_t* USBEndpointGet(uint8_t endpointNumber, EndpointDirection endpointDirection)
 {
 	USBEndpoint_t *usbEndpointP = NULL;
 	
@@ -144,7 +156,7 @@ USBEndpoint_t* USBEndpointGet(USBEndpointTable_t *usbEndpointTableP, uint8_t end
 	return usbEndpointP;
 }
 
-USBEndpoint_t* USBEndpointGetFIFO(USBEndpointTable_t *usbEndpointTableP)
+USBEndpoint_t* USBEndpointGetFIFO(void)
 {
 	/*
 		treat the usbEndpointP as just another 16bit number, add the negative fiforp value to it. This
