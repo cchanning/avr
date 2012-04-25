@@ -6,7 +6,7 @@ typedef struct _USBEndpoint
 	volatile uint8_t status;
 	volatile uint8_t ctrl;
 	volatile uint16_t cnt;
-	volatile uint8_t *dataBufferP;
+	volatile void *dataBufferP;
 	volatile uint16_t auxData;
 	
 } USBEndpoint_t;
@@ -15,6 +15,7 @@ typedef struct _USBEndpointConfiguration
 {
 	uint8_t type;
 	uint8_t bufferSize;
+	uint8_t bufferType;
 } USBEndpointConfiguration_t;
 
 typedef struct _USBEndpointTableConfiguration
@@ -57,7 +58,8 @@ bool USBEndpointTableAlloc(const USBEndpointTableConfiguration_t const *usbEndpo
 
 USBEndpointTable_t* USBEndpointTableGet(void);
 USBEndpoint_t* USBEndpointGet(uint8_t endpointNumber, EndpointDirection endpointDirection);
-USBEndpoint_t* USBEndpointGetFIFO(void);
+USBEndpoint_t* USBEndpointGetDefault(EndpointDirection endpointDirection);
+USBEndpoint_t* USBEndpointTxQueueGetNext(void);
 
 void USBEndpointReset(USBEndpoint_t *usbEndpoint, const USBEndpointConfiguration_t const *usbEndpointConfigurationP);
 void USBEndpointResetAll(void);

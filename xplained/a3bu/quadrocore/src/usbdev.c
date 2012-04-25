@@ -3,15 +3,15 @@
 void USBDeviceReset(void)
 {	
 	USBEndpointResetAll();
-	USBDeviceSetAddress(0);	
+	USBDeviceSetAddress(NULL, NULL, NULL);
 }
 
-void USBDeviceGetDescriptor(void)
+void USBDeviceGetDescriptor(SetupRequestDescriptor_t *setupRequestDescriptorP, USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP)
 {
-	
+
 }
 
-void USBDeviceSetAddress(uint8_t address)
+void USBDeviceSetAddress(SetupRequestDescriptor_t *setupRequestDescriptorP, USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP)
 {
 	
 }

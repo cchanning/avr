@@ -31,30 +31,35 @@ void USBEndpointReset(USBEndpoint_t *usbEndpointP, const USBEndpointConfiguratio
 	}
 	
 	usbEndpointP->status = 0;
-	usbEndpointP->ctrl = usbEndpointConfigurationP->type;
+	usbEndpointP->ctrl = usbEndpointConfigurationP->type | usbEndpointConfigurationP->bufferType;
 	usbEndpointP->cnt = 0;
 	usbEndpointP->auxData = 0;
 	
-	// zero out the data buffer
-	for (volatile uint8_t *dataBufferP = usbEndpointP->dataBufferP; dataBufferP < (usbEndpointP->dataBufferP) + usbEndpointConfigurationP->bufferSize; dataBufferP++)
+	if (usbEndpointP->dataBufferP)
 	{
-		*dataBufferP = 0;
+		uint8_t *dataBufferP = NULL;
+		
+		// zero out the data buffer
+		for (dataBufferP = (uint8_t *)usbEndpointP->dataBufferP; dataBufferP < ((uint8_t *)usbEndpointP->dataBufferP + usbEndpointConfigurationP->bufferSize); dataBufferP++)
+		{
+			*dataBufferP = 0;
+		}	
 	}
 }
 
-bool USBEndpointInit(USBEndpoint_t *usbEndpointP, const USBEndpointConfiguration_t const *endpointConfigurationP)
+bool USBEndpointInit(USBEndpoint_t *usbEndpointP, const USBEndpointConfiguration_t const *usbEndpointConfigurationP)
 {
 	if (! usbEndpointP)
 	{
 		return false;
 	}
 		
-	if (! (usbEndpointP->dataBufferP = calloc(1, endpointConfigurationP->bufferSize * sizeof(uint8_t))))
+	if (! (usbEndpointP->dataBufferP = calloc(1, usbEndpointConfigurationP->bufferSize * sizeof(uint8_t))))
 	{
 		return false;
 	}
 	
-	USBEndpointReset(usbEndpointP, endpointConfigurationP);
+	USBEndpointReset(usbEndpointP, usbEndpointConfigurationP);
 	
 	return true;
 }
@@ -177,13 +182,22 @@ USBEndpoint_t* USBEndpointGet(uint8_t endpointNumber, EndpointDirection endpoint
 	return usbEndpointP;
 }
 
-USBEndpoint_t* USBEndpointGetFIFO(void)
+USBEndpoint_t* USBEndpointGetDefault(EndpointDirection endpointDirection)
 {
-	/*
-		treat the usbEndpointP as just another 16bit number, add the negative fiforp value to it. This
-		should cause the calculated value to be the address of the endpoint. So just cast it as a 
-		pointer to the endpoint. Remember that the usbEndpointP will always point to the start of the
-		endpoint table.
-	 */
-	return (USBEndpoint_t *)(USB.FIFORP + ((uint16_t)usbEndpointTableP->usbEndpointP));
+	return 	USBEndpointGet(0, endpointDirection);
+}
+
+USBEndpoint_t* USBEndpointTxQueueGetNext(void)
+{
+	// note that reading this register causes the USB module adjust the pointer in hardware
+	sint8_t fifoRP = (sint8_t)USB.FIFORP;
+	//note that reading this register has no affect on the pointer
+	sint8_t fifoWP = (sint8_t)USB.FIFOWP;
+	
+	if (fifoRP == fifoWP)
+	{
+		return NULL;
+	}
+	
+	return (USBEndpoint_t *)((((uint16_t)usbEndpointTableP->usbEndpointP) + 2) * fifoRP);
 }

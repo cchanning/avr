@@ -22,42 +22,10 @@ bool USBModuleInit(const USBConfiguration_t *usbConfigurationP)
 	// set the PLL as the USB clock source, enable the USB clock source (start feeding the USB module clock signals)
 	CLK.USBCTRL = CLK_USBSRC_PLL_gc | CLK_USBSEN_bm;
 	
-	USB.CTRLA = USB_ENABLE_bm | USB_SPEED_bm | USB_FIFOEN_bm | usbConfigurationP->usbEndpointTableConfiguration.endpointCount;
+	USB.CTRLA = USB_ENABLE_bm | USB_SPEED_bm | usbConfigurationP->usbEndpointTableConfiguration.endpointCount;
 	
 	// attach the USB module to the bus (allows the host to start the enumeration process)
 	USB.CTRLB = USB_ATTACH_bm;
 	
 	return true;
-}
-
-ISR(USB_BUSEVENT_vect)
-{
-	DisableGlobalInterrupts();
-	{		
-		if (USB.INTFLAGSASET & USB_RSTIF_bm)
-		{
-			USBDeviceReset();
-			USB.INTFLAGSACLR = USB_RSTIF_bm;
-		}
-		
-		if (USB.INTFLAGSASET & USB_SUSPENDIF_bm)
-		{
-			USB.INTFLAGSACLR = USB_SUSPENDIF_bm;
-		}
-		
-		if (USB.INTFLAGSASET & USB_RESUMEIF_bm)
-		{
-			USB.INTFLAGSACLR = USB_RESUMEIF_bm;
-		}
-	}	
-	EnableGlobalInterrupts();
-}
-
-ISR(USB_TRNCOMPL_vect)
-{
-	DisableGlobalInterrupts();
-	{
-		//TODO
-	}	
-	EnableGlobalInterrupts();	
 }

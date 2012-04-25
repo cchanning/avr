@@ -15,5 +15,6 @@
 #include "usb/usb.h"
 #include "usb/usbdev.h"
 #include "usb/usbep.h"
+#include "usb/usbreq.h"
 
 #endif /* QUADROCORE_H_ */

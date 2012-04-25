@@ -5,5 +5,6 @@
 #define false 0
 
 typedef _Bool	bool;
+typedef signed char sint8_t;
 
 #endif /* TYPE_H_ */
