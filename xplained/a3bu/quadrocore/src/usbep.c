@@ -2,7 +2,28 @@
 
 static USBEndpointTable_t *usbEndpointTableP = NULL;
 
-void USBEndpointReset(USBEndpoint_t *usbEndpointP, uint8_t endpointBufferSize, uint8_t endpointType)
+void USBEndpointResetAll(void)
+{
+	USBEndpointTable_t *usbEndpointTableP = USBEndpointTableGet();
+	
+	if (! usbEndpointTableP)
+	{
+		return;
+	}
+	
+	{
+		uint8_t endpointNumber = 0;
+		
+		for (endpointNumber = 0; endpointNumber < usbEndpointTableP->usbEndpointTableConfigurationP->endpointCount; endpointNumber++)
+		{
+			const USBEndpointConfiguration_t const *endpointConfigurationP = &usbEndpointTableP->usbEndpointTableConfigurationP->endpointConfiguration[endpointNumber];
+			USBEndpointReset(USBEndpointGet(endpointNumber, OUT), endpointConfigurationP);
+			USBEndpointReset(USBEndpointGet(endpointNumber, IN), endpointConfigurationP);
+		}	
+	}
+}
+
+void USBEndpointReset(USBEndpoint_t *usbEndpointP, const USBEndpointConfiguration_t const *usbEndpointConfigurationP)
 {
 	if (! usbEndpointP)
 	{
@@ -10,30 +31,30 @@ void USBEndpointReset(USBEndpoint_t *usbEndpointP, uint8_t endpointBufferSize, u
 	}
 	
 	usbEndpointP->status = 0;
-	usbEndpointP->ctrl = endpointType;
+	usbEndpointP->ctrl = usbEndpointConfigurationP->type;
 	usbEndpointP->cnt = 0;
 	usbEndpointP->auxData = 0;
 	
 	// zero out the data buffer
-	for (volatile uint8_t *dataBufferP = usbEndpointP->dataBufferP; dataBufferP < (usbEndpointP->dataBufferP) + endpointBufferSize; dataBufferP++)
+	for (volatile uint8_t *dataBufferP = usbEndpointP->dataBufferP; dataBufferP < (usbEndpointP->dataBufferP) + usbEndpointConfigurationP->bufferSize; dataBufferP++)
 	{
 		*dataBufferP = 0;
 	}
 }
 
-bool USBEndpointInit(USBEndpoint_t *usbEndpointP, uint8_t endpointBufferSize, uint8_t endpointType)
+bool USBEndpointInit(USBEndpoint_t *usbEndpointP, const USBEndpointConfiguration_t const *endpointConfigurationP)
 {
 	if (! usbEndpointP)
 	{
 		return false;
 	}
 		
-	if (! (usbEndpointP->dataBufferP = calloc(1, endpointBufferSize * sizeof(uint8_t))))
+	if (! (usbEndpointP->dataBufferP = calloc(1, endpointConfigurationP->bufferSize * sizeof(uint8_t))))
 	{
 		return false;
 	}
 	
-	USBEndpointReset(usbEndpointP, endpointBufferSize, endpointType);
+	USBEndpointReset(usbEndpointP, endpointConfigurationP);
 	
 	return true;
 }
@@ -47,7 +68,7 @@ void USBEndpointFree(USBEndpoint_t *usbEndpointP)
 	
 	if (usbEndpointP->dataBufferP)
 	{
-		free(usbEndpointP->dataBufferP);
+		free((void *)usbEndpointP->dataBufferP);
 	}
 	
 	usbEndpointP->status = 0;
@@ -77,7 +98,7 @@ void USBEndpointTableFree(void)
 		free(usbEndpointTableP->baseP);
 	}
 	
-	free(usbEndpointTableP);
+	free((void *)usbEndpointTableP);
 	usbEndpointTableP = NULL;
 }
 
@@ -86,7 +107,7 @@ USBEndpointTable_t* USBEndpointTableGet(void)
 	return usbEndpointTableP;
 }
 
-bool USBEndpointTableAlloc(USBEndpointTableConfiguration_t *usbEndpointTableConfigurationP)
+bool USBEndpointTableAlloc(const USBEndpointTableConfiguration_t const *usbEndpointTableConfigurationP)
 {
 	const uint8_t FIFO_SIZE = (usbEndpointTableConfigurationP->endpointCount + 1) * 4;
 	const uint16_t ENDPOINT_TABLE_SIZE = (sizeof(USBEndpoint_t) * 2) ;
@@ -125,8 +146,8 @@ bool USBEndpointTableAlloc(USBEndpointTableConfiguration_t *usbEndpointTableConf
 			
 	for (uint8_t endpointNumber = 0; endpointNumber < usbEndpointTableConfigurationP->endpointCount; endpointNumber++)
 	{
-		if ((! USBEndpointInit(USBEndpointGet(endpointNumber, OUT), usbEndpointTableConfigurationP->endpointBufferSize, usbEndpointTableConfigurationP->endpointType[endpointNumber]))
-			|| (! USBEndpointInit(USBEndpointGet(endpointNumber, IN), usbEndpointTableConfigurationP->endpointBufferSize, usbEndpointTableConfigurationP->endpointType[endpointNumber])))
+		if ((! USBEndpointInit(USBEndpointGet(endpointNumber, OUT), &usbEndpointTableConfigurationP->endpointConfiguration[endpointNumber]))
+			|| (! USBEndpointInit(USBEndpointGet(endpointNumber, IN), &usbEndpointTableConfigurationP->endpointConfiguration[endpointNumber])))
 		{
 				USBEndpointTableFree();
 				return false;

@@ -95,6 +95,9 @@
     <Compile Include="include\usb\usbep.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="include\usb\usbreq.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="interrupt.c">
       <SubType>compile</SubType>
     </Compile>

@@ -1,13 +1,17 @@
 #include "quadrocore.h"
 
 void USBDeviceReset(void)
+{	
+	USBEndpointResetAll();
+	USBDeviceSetAddress(0);	
+}
+
+void USBDeviceGetDescriptor(void)
 {
-	USBEndpointTable_t *usbEndpointTableP = USBEndpointTableGet();
 	
-	if (! usbEndpointTableP)
-	{
-		return;
-	}
-	
+}
+
+void USBDeviceSetAddress(uint8_t address)
+{
 	
 }

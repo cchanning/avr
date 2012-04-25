@@ -11,11 +11,16 @@ typedef struct _USBEndpoint
 	
 } USBEndpoint_t;
 
+typedef struct _USBEndpointConfiguration
+{
+	uint8_t type;
+	uint8_t bufferSize;
+} USBEndpointConfiguration_t;
+
 typedef struct _USBEndpointTableConfiguration
 {
 	uint8_t endpointCount;
-	uint8_t endpointBufferSize;
-	uint8_t endpointType[8];
+	USBEndpointConfiguration_t endpointConfiguration[8];
 } USBEndpointTableConfiguration_t;
 
 typedef struct _USBEndpointTable
@@ -37,7 +42,7 @@ typedef struct _USBEndpointTable
 	 */
 	USBEndpoint_t *usbEndpointP;
 	
-	USBEndpointTableConfiguration_t *usbEndpointTableConfigurationP;
+	const USBEndpointTableConfiguration_t const *usbEndpointTableConfigurationP;
 
 } USBEndpointTable_t;
 
@@ -48,10 +53,13 @@ typedef enum _EndpointDirection
 } EndpointDirection;
 
 
-bool USBEndpointTableAlloc(USBEndpointTableConfiguration_t *usbEndpointTableConfigurationP);
+bool USBEndpointTableAlloc(const USBEndpointTableConfiguration_t const *usbEndpointTableConfigurationP);
+
 USBEndpointTable_t* USBEndpointTableGet(void);
 USBEndpoint_t* USBEndpointGet(uint8_t endpointNumber, EndpointDirection endpointDirection);
 USBEndpoint_t* USBEndpointGetFIFO(void);
-void USBEndpointReset(USBEndpoint_t *usbEndpoint, uint8_t endpointBufferSize, uint8_t endpointType);
+
+void USBEndpointReset(USBEndpoint_t *usbEndpoint, const USBEndpointConfiguration_t const *usbEndpointConfigurationP);
+void USBEndpointResetAll(void);
 
 #endif /* USBEP_H_ */

@@ -6,9 +6,10 @@
 
 typedef struct _USBConfiguration
 {
+	uint8_t usbInterruptLevel;
 	USBEndpointTableConfiguration_t usbEndpointTableConfiguration;
 } USBConfiguration_t;
 
-bool USBModuleInit(USBConfiguration_t *usbConfigurationP);
+bool USBModuleInit(const USBConfiguration_t *usbConfigurationP);
 
 #endif /* USB_H_ */

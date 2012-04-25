@@ -2,7 +2,7 @@
 #define INTERRUPT_H_
 
 
-void SetPMICLevel(uint8_t level);
+void PMICInit(uint8_t level);
 void EnableGlobalInterrupts(void);
 void DisableGlobalInterrupts(void);
 

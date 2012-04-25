@@ -4,17 +4,24 @@ int main(void)
 {
 	USBConfiguration_t usbConfiguration = 
 	{
+		.usbInterruptLevel = USB_INTLVL_HI_gc,
 		.usbEndpointTableConfiguration = 
 		{
 			.endpointCount = 1,
-			.endpointBufferSize = 32,
-			.endpointType[0] = USB_EP_TYPE_CONTROL_gc
+			.endpointConfiguration[0] = 
+			{
+				.type = USB_EP_TYPE_CONTROL_gc,
+				.bufferSize = 32
+			}
 		}
 	};
 	
+	/*
+		Configure the system clock to be 48mhz for the PLL and set the CPU/RAM/etc to run at 24mhz
+	 */
 	SystemClockInit();
 	USBModuleInit(&usbConfiguration);
-	SetPMICLevel(PMIC_HILVLEN_bm);
+	PMICInit(PMIC_HILVLEN_bm);
 	EnableGlobalInterrupts();
 	
 	for ( ; ; );

@@ -1,6 +1,6 @@
 #include "quadrocore.h"
 
-void SetPMICLevel(uint8_t level)
+void PMICInit(uint8_t level)
 {
 	PMIC.CTRL = level;
 }

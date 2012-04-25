@@ -1,6 +1,6 @@
 #include "quadrocore.h"
 
-bool USBModuleInit(USBConfiguration_t *usbConfigurationP)
+bool USBModuleInit(const USBConfiguration_t *usbConfigurationP)
 {
 	if (! USBEndpointTableAlloc(&usbConfigurationP->usbEndpointTableConfiguration))
 	{
@@ -16,7 +16,7 @@ bool USBModuleInit(USBConfiguration_t *usbConfigurationP)
 	USB.CAL1 = pgm_read_byte(offsetof(NVM_PROD_SIGNATURES_t, USBCAL1));
 	NVM.CMD = NVM_CMD_NO_OPERATION_gc; 
 	
-	USB.INTCTRLA = USB_INTLVL_HI_gc | USB_BUSEVIE_bm;
+	USB.INTCTRLA = usbConfigurationP->usbInterruptLevel | USB_BUSEVIE_bm;
 	USB.INTCTRLB = USB_TRNIE_bm | USB_SETUPIE_bm;
 	
 	// set the PLL as the USB clock source, enable the USB clock source (start feeding the USB module clock signals)
