@@ -19,15 +19,15 @@ int main(void)
 		}
 	};
 	
-	/*
-		Configure the system clock to be 48mhz for the PLL and set the CPU/RAM/etc to run at 24mhz
-	 */
-	SystemClockInit();
-	USBModuleInit(&usbConfiguration);
-	PMICInit(PMIC_HILVLEN_bm);
+	DisableGlobalInterrupts();
+	{
+		SystemClockInit();
+		USBModuleInit(&usbConfiguration);
+		PMICInit(PMIC_HILVLEN_bm);		
+	}
 	EnableGlobalInterrupts();
 	
-	for ( ; ; );
+	while(1);
 	
 	return 0;
 }
