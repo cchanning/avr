@@ -4,11 +4,9 @@ ISR(USB_BUSEVENT_vect)
 {
 	DisableGlobalInterrupts();
 	{		
-		if (USB.INTFLAGSASET & USB_RSTIF_bm)
+		if (USB.INTFLAGSASET & USB_SOFIF_bm)
 		{
-			USBDeviceReset();
-			
-			USB.INTFLAGSACLR = USB_RSTIF_bm;
+			USB.INTFLAGSACLR = USB_SOFIF_bm;
 		}
 		
 		if (USB.INTFLAGSASET & USB_SUSPENDIF_bm)
@@ -19,6 +17,32 @@ ISR(USB_BUSEVENT_vect)
 		if (USB.INTFLAGSASET & USB_RESUMEIF_bm)
 		{
 			USB.INTFLAGSACLR = USB_RESUMEIF_bm;
+		}
+		
+		if (USB.INTFLAGSASET & USB_RSTIF_bm)
+		{
+			USBDeviceReset();
+			USB.INTFLAGSACLR = USB_RSTIF_bm;
+		}
+		
+		if (USB.INTFLAGSASET & USB_CRCIF_bm)
+		{
+			USB.INTFLAGSACLR = USB_CRCIF_bm;
+		}
+		
+		if (USB.INTFLAGSASET & USB_UNFIF_bm)
+		{
+			USB.INTFLAGSACLR = USB_UNFIF_bm;
+		}
+		
+		if (USB.INTFLAGSASET & USB_OVFIF_bm)
+		{
+			USB.INTFLAGSACLR = USB_OVFIF_bm;
+		}
+		
+		if (USB.INTFLAGSASET & USB_STALLIF_bm)
+		{
+			USB.INTFLAGSACLR = USB_STALLIF_bm;
 		}
 	}	
 	EnableGlobalInterrupts();
@@ -33,7 +57,6 @@ ISR(USB_TRNCOMPL_vect)
 			
 		if (USB.INTFLAGSBSET & USB_SETUPIF_bm)
 		{
-			//for now assume the only endpoint that can handle SETUP packets is the default
 			ProcessSetupRequest(USBEndpointGetDefault(OUT), USBEndpointGetDefault(IN));
 			USB.INTFLAGSBCLR = USB_SETUPIF_bm;	
 		}

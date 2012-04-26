@@ -113,10 +113,7 @@ USBEndpointTable_t* USBEndpointTableGet(void)
 }
 
 bool USBEndpointTableAlloc(const USBEndpointTableConfiguration_t const *usbEndpointTableConfigurationP)
-{
-	const uint8_t FIFO_SIZE = (usbEndpointTableConfigurationP->endpointCount + 1) * 4;
-	const uint16_t ENDPOINT_TABLE_SIZE = (sizeof(USBEndpoint_t) * 2) ;
-		
+{		
 	if (usbEndpointTableP)
 	{
 		return true;
@@ -131,23 +128,27 @@ bool USBEndpointTableAlloc(const USBEndpointTableConfiguration_t const *usbEndpo
 	{
 		return false;
 	}	
-				
-	usbEndpointTableP->usbEndpointTableConfigurationP = usbEndpointTableConfigurationP;
-			
-	/*
-		Note that as we allocate the endpoint table dynamically we also need to take into account the FIFO memory block
-		used to contain the addresses of the last "touched" endpoint. The FIFO is handled directly by the USB module and it
-		appears before the endpoint table. If we were statically allocating this then we could have used a structure and its
-		side by side elements but it seems restrictive as it would mean defining all of the possible endpoints up front.
-	 */
-	if (! (usbEndpointTableP->baseP = calloc(usbEndpointTableConfigurationP->endpointCount, FIFO_SIZE + ENDPOINT_TABLE_SIZE)))
+					
 	{
-		USBEndpointTableFree();
-		return false;
-	}
-	
-	usbEndpointTableP->fifoP = usbEndpointTableP->baseP;
-	usbEndpointTableP->usbEndpointP = (USBEndpoint_t *)(((uint8_t *)usbEndpointTableP->fifoP) + FIFO_SIZE);
+		const uint8_t FIFO_SIZE = (usbEndpointTableConfigurationP->endpointCount + 1) * 4;
+		const uint16_t ENDPOINT_TABLE_SIZE = usbEndpointTableConfigurationP->endpointCount * (sizeof(USBEndpoint_t) * 2);
+		
+		/*
+			Note that as we allocate the endpoint table dynamically we also need to take into account the FIFO memory block
+			used to contain the addresses of the last "touched" endpoint. The FIFO is handled directly by the USB module and it
+			appears before the endpoint table. If we were statically allocating this then we could have used a structure and its
+			side by side elements but it seems restrictive as it would mean defining all of the possible endpoints up front.
+		 */
+		if (! (usbEndpointTableP->baseP = calloc(1, FIFO_SIZE + ENDPOINT_TABLE_SIZE)))
+		{
+			USBEndpointTableFree();
+			return false;
+		}
+		
+		usbEndpointTableP->usbEndpointTableConfigurationP = usbEndpointTableConfigurationP;
+		usbEndpointTableP->fifoP = usbEndpointTableP->baseP;
+		usbEndpointTableP->usbEndpointP = (USBEndpoint_t *)(((uint8_t *)usbEndpointTableP->fifoP) + FIFO_SIZE);
+	}	
 			
 	for (uint8_t endpointNumber = 0; endpointNumber < usbEndpointTableConfigurationP->endpointCount; endpointNumber++)
 	{
