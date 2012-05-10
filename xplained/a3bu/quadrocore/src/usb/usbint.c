@@ -26,7 +26,7 @@ ISR(USB_BUSEVENT_vect)
 		}
 		
 		if (USB.INTFLAGSASET & USB_CRCIF_bm)
-		{
+		{	
 			USB.INTFLAGSACLR = USB_CRCIF_bm;
 		}
 		
@@ -49,12 +49,9 @@ ISR(USB_BUSEVENT_vect)
 }
 
 ISR(USB_TRNCOMPL_vect)
-{
+{	
 	DisableGlobalInterrupts();
-	{		
-		PORTR.DIR = 0xFF;
-		PORTR.OUTSET = 0x00;
-			
+	{	
 		if (USB.INTFLAGSBSET & USB_SETUPIF_bm)
 		{
 			ProcessSetupRequest(USBEndpointGetDefault(OUT), USBEndpointGetDefault(IN));

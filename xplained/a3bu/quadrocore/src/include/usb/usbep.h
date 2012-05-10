@@ -21,7 +21,7 @@ typedef struct _USBEndpointConfiguration
 typedef struct _USBEndpointTableConfiguration
 {
 	uint8_t endpointCount;
-	USBEndpointConfiguration_t endpointConfiguration[8];
+	USBEndpointConfiguration_t endpointConfiguration[1];
 } USBEndpointTableConfiguration_t;
 
 typedef struct _USBEndpointTable

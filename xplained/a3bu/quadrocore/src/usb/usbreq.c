@@ -43,16 +43,19 @@ SetupRequestHandler_t* SetupRequestResolveHandler(SetupRequestDescriptor_t *setu
 		//decode the type and recipient from the request
 		uint8_t type = setupRequestDescriptorP->requestType & USB_REQUEST_TYPE_FLD_TYPE_bm;
 		uint8_t recipient = setupRequestDescriptorP->requestType & USB_REQUEST_TYPE_FLD_RECIPIENT_bm;
-		SetupRequestHandler_t *setupRequestHandlerP = NULL;
 		
-		for (setupRequestHandlerP = setupRequestHandlerTableP; setupRequestHandlerP < (setupRequestHandlerTableP + USB_REQUEST_TYPE_HANDLER_COUNT); setupRequestHandlerP++)
 		{
-			// if we get match on the id, just double check that we're scoped properly for request just in case request ids are not unique
-			if ((setupRequestHandlerP->id == setupRequestDescriptorP->request) && (setupRequestHandlerP->recipient == recipient) && (setupRequestHandlerP->type = type))
+			SetupRequestHandler_t *setupRequestHandlerP = NULL;
+		
+			for (setupRequestHandlerP = setupRequestHandlerTableP; setupRequestHandlerP < (setupRequestHandlerTableP + USB_REQUEST_TYPE_HANDLER_COUNT); setupRequestHandlerP++)
 			{
-				return setupRequestHandlerP;
+				// if we get match on the id, just double check that we're scoped properly for request just in case request ids are not unique
+				if ((setupRequestHandlerP->id == setupRequestDescriptorP->request) && (setupRequestHandlerP->recipient == recipient) && (setupRequestHandlerP->type == type))
+				{
+					return setupRequestHandlerP;
+				}
 			}
-		}
+		}			
 	}
 		
 	return NULL;

@@ -6,7 +6,6 @@
 
 typedef struct _USBConfiguration
 {
-	uint8_t usbInterruptLevel;
 	USBEndpointTableConfiguration_t usbEndpointTableConfiguration;
 } USBConfiguration_t;
 

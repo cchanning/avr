@@ -4,7 +4,6 @@ int main(void)
 {
 	const USBConfiguration_t const usbConfiguration = 
 	{
-		.usbInterruptLevel = USB_INTLVL_HI_gc,
 		.usbEndpointTableConfiguration = 
 		{
 			.endpointCount = 1,
@@ -22,12 +21,15 @@ int main(void)
 	DisableGlobalInterrupts();
 	{
 		SystemClockInit();
-		USBModuleInit(&usbConfiguration);
-		PMICInit(PMIC_HILVLEN_bm);		
+		PMICInit(PMIC_HILVLEN_bm);
+		USBModuleInit(&usbConfiguration);		
 	}
 	EnableGlobalInterrupts();
 	
-	while(1);
+	for ( ; ; )
+	{
+		// keep looping forever (we are interrupt driven)
+	}
 	
 	return 0;
 }

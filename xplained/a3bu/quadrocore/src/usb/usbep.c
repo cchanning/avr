@@ -132,6 +132,7 @@ bool USBEndpointTableAlloc(const USBEndpointTableConfiguration_t const *usbEndpo
 	{
 		const uint8_t FIFO_SIZE = (usbEndpointTableConfigurationP->endpointCount + 1) * 4;
 		const uint16_t ENDPOINT_TABLE_SIZE = usbEndpointTableConfigurationP->endpointCount * (sizeof(USBEndpoint_t) * 2);
+		const uint8_t ENDPOINT_PADDING_SIZE = 1;
 		
 		/*
 			Note that as we allocate the endpoint table dynamically we also need to take into account the FIFO memory block
@@ -139,7 +140,7 @@ bool USBEndpointTableAlloc(const USBEndpointTableConfiguration_t const *usbEndpo
 			appears before the endpoint table. If we were statically allocating this then we could have used a structure and its
 			side by side elements but it seems restrictive as it would mean defining all of the possible endpoints up front.
 		 */
-		if (! (usbEndpointTableP->baseP = calloc(1, FIFO_SIZE + ENDPOINT_TABLE_SIZE)))
+		if (! (usbEndpointTableP->baseP = calloc(1, FIFO_SIZE + ENDPOINT_TABLE_SIZE + ENDPOINT_PADDING_SIZE)))
 		{
 			USBEndpointTableFree();
 			return false;
@@ -148,6 +149,17 @@ bool USBEndpointTableAlloc(const USBEndpointTableConfiguration_t const *usbEndpo
 		usbEndpointTableP->usbEndpointTableConfigurationP = usbEndpointTableConfigurationP;
 		usbEndpointTableP->fifoP = usbEndpointTableP->baseP;
 		usbEndpointTableP->usbEndpointP = (USBEndpoint_t *)(((uint8_t *)usbEndpointTableP->fifoP) + FIFO_SIZE);
+		
+		/*
+			Note that there appears to be a bug on the XMega256A3BU that if the USB.EPPTR is not given an even address,
+			the chip seems to decrement it upon being set. However, the table is then never found during runtime.
+			The only way around this is to make sure the address is even, hence the additional "padding" added to the
+			memory allocation. If the address is odd then we simply increment it by one byte. 
+		 */
+		if (((uint8_t)usbEndpointTableP->usbEndpointP % 2) != 0)
+		{
+			usbEndpointTableP->usbEndpointP = (USBEndpoint_t *)(((uint8_t *)usbEndpointTableP->usbEndpointP) + 1);
+		}
 	}	
 			
 	for (uint8_t endpointNumber = 0; endpointNumber < usbEndpointTableConfigurationP->endpointCount; endpointNumber++)

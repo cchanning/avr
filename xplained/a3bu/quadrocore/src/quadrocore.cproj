@@ -41,43 +41,43 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <ToolchainSettings>
       <AvrGcc>
-  <avrgcc.compiler.directories.IncludePaths>
-    <ListValues>
-      <Value>../include</Value>
-    </ListValues>
-  </avrgcc.compiler.directories.IncludePaths>
-  <avrgcc.compiler.optimization.level>Optimize (-O1)</avrgcc.compiler.optimization.level>
-</AvrGcc>
+        <avrgcc.compiler.directories.IncludePaths>
+          <ListValues>
+            <Value>../include</Value>
+          </ListValues>
+        </avrgcc.compiler.directories.IncludePaths>
+        <avrgcc.compiler.optimization.level>Optimize (-O1)</avrgcc.compiler.optimization.level>
+      </AvrGcc>
     </ToolchainSettings>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <ToolchainSettings>
       <AvrGcc>
-  <avrgcc.compiler.directories.IncludePaths>
-    <ListValues>
-      <Value>../include</Value>
-    </ListValues>
-  </avrgcc.compiler.directories.IncludePaths>
-  <avrgcc.compiler.optimization.DebugLevel>Maximum (-g3)</avrgcc.compiler.optimization.DebugLevel>
-  <avrgcc.compiler.miscellaneous.Verbose>True</avrgcc.compiler.miscellaneous.Verbose>
-  <avrgcc.assembler.debugging.DebugLevel>Maximum (-Wa,-g3)</avrgcc.assembler.debugging.DebugLevel>
-</AvrGcc>
+        <avrgcc.compiler.directories.IncludePaths>
+          <ListValues>
+            <Value>../include</Value>
+          </ListValues>
+        </avrgcc.compiler.directories.IncludePaths>
+        <avrgcc.compiler.optimization.DebugLevel>Maximum (-g3)</avrgcc.compiler.optimization.DebugLevel>
+        <avrgcc.compiler.miscellaneous.Verbose>True</avrgcc.compiler.miscellaneous.Verbose>
+        <avrgcc.assembler.debugging.DebugLevel>Maximum (-Wa,-g3)</avrgcc.assembler.debugging.DebugLevel>
+      </AvrGcc>
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="clock.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="cpu.c">
+    <Compile Include="ccp.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="include\clock.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\cpu.h">
+    <Compile Include="include\ccp.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\interrupt.h">
+    <Compile Include="include\pmic.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="include\quadrocore.h">
@@ -98,7 +98,7 @@
     <Compile Include="include\usb\usbreq.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="interrupt.c">
+    <Compile Include="pmic.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="quadrocore.c">
@@ -126,7 +126,7 @@
     <Folder Include="usb" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="usb.asm">
+    <None Include="usb.asm.old">
       <SubType>compile</SubType>
     </None>
   </ItemGroup>

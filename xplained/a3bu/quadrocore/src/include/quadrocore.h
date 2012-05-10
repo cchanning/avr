@@ -9,8 +9,8 @@
 #include <avr/pgmspace.h>
 
 #include "clock.h"
-#include "cpu.h"
-#include "interrupt.h"
+#include "ccp.h"
+#include "pmic.h"
 #include "type.h"
 #include "usb/usb.h"
 #include "usb/usbdev.h"
