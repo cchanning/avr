@@ -48,8 +48,8 @@ bool SystemClockInit(void)
 	}
 	
 	// set prescaler A to div by 2, disable prescalers C/B (CPU etc will run at 24Mhz)
-	ccp_io_set(&CLK.PSCTRL, 0b00000100);
+	SetProtectedMemory(&CLK.PSCTRL, 0b00000100);
 	
 	// set the clock source as PLL
-	ccp_io_set(&CLK.CTRL, 0b00000100);
+	SetProtectedMemory(&CLK.CTRL, 0b00000100);
 }

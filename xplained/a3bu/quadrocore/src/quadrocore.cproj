@@ -104,25 +104,26 @@
     <Compile Include="quadrocore.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="usb.c">
+    <Compile Include="usb\usb.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="usbdev.c">
+    <Compile Include="usb\usbdev.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="usbep.c">
+    <Compile Include="usb\usbep.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="usbint.c">
+    <Compile Include="usb\usbint.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="usbreq.c">
+    <Compile Include="usb\usbreq.c">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="include" />
     <Folder Include="include\usb" />
+    <Folder Include="usb" />
   </ItemGroup>
   <ItemGroup>
     <None Include="usb.asm">

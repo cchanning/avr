@@ -1,6 +1,6 @@
 #include "quadrocore.h"
 
-void ccp_io_set(volatile uint8_t *address, volatile uint8_t value)
+void SetProtectedMemory(volatile uint8_t *address, volatile uint8_t value)
 {
     asm volatile
 	(
