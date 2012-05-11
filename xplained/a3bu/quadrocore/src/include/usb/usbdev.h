@@ -22,8 +22,8 @@ typedef struct _USBDeviceDescriptor
 } USBDeviceDescriptor_t;
 
 void USBDeviceReset(void);
-void USBDeviceGetDescriptor(USBRequest_t *usbRequestP, USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP);
-void USBDeviceSetAddress(USBRequest_t *usbRequestP, USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP);
+void USBDeviceGetDescriptor(USBRequest_t *usbRequestP, USBResponse_t *usbResponseP, USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP);
+void USBDeviceSetAddress(USBRequest_t *usbRequestP, USBResponse_t *usbResponseP, USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP);
 
 
 #endif /* USBDEV_H_ */

@@ -3,11 +3,11 @@
 void USBDeviceReset(void)
 {	
 	USBEndpointResetAll();
-	USBDeviceSetAddress(NULL, NULL, NULL);
+	USBDeviceSetAddress(NULL, NULL, NULL, NULL);
 	USB.STATUS ^= USB_BUSRST_bm;
 }
 
-void USBDeviceGetDescriptor(USBRequest_t *usbRequestP, USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP)
+void USBDeviceGetDescriptor(USBRequest_t *usbRequestP, USBResponse_t *usbResponseP, USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP)
 {
 	USBDeviceDescriptor_t *usbDeviceDescriptorP = (USBDeviceDescriptor_t *)usbEndpointInP->dataBufferP;	
 	
@@ -26,16 +26,10 @@ void USBDeviceGetDescriptor(USBRequest_t *usbRequestP, USBEndpoint_t *usbEndpoin
 	usbDeviceDescriptorP->numberOfConfigurations = 0x01;
 	usbDeviceDescriptorP->usbVersion = 0x0200;
 	
-	USBEndpointTransmit(usbEndpointInP, sizeof(USBStandardDeviceRequest_t));
+	usbResponseP->byteCount = usbDeviceDescriptorP->length;
 }
 
-void USBDeviceSetAddress(USBRequest_t *usbRequestP, USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP)
-{
-	if (! usbRequestP)
-	{
-		return;
-	}
-	
-	PORTR.DIR = 0xFF;
-	PORTR.OUTSET = 0x01;	
+void USBDeviceSetAddress(USBRequest_t *usbRequestP, USBResponse_t *usbResponseP, USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP)
+{	
+	usbResponseP->byteCount = 0;
 }

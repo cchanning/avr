@@ -77,6 +77,18 @@ void ProcessSetupRequest(USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpo
 			return;
 		}
 		
-		(*setupRequestHandlerP->handlerFuncP)(usbRequestP, usbEndpointOutP, usbEndpointInP);		
+		// handle the request and transmit the response
+		{
+			USBResponse_t *usbResponseP = NULL;
+			
+			if (! (usbResponseP = calloc(1, sizeof(USBResponse_t))))
+			{
+				return;
+			}
+			
+			(*setupRequestHandlerP->handlerFuncP)(usbRequestP, usbResponseP, usbEndpointOutP, usbEndpointInP);
+			USBEndpointTransmit(usbEndpointInP, usbResponseP->byteCount);
+			free(usbResponseP);
+		}
 	}
 }

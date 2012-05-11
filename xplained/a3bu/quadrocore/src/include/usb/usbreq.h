@@ -19,6 +19,16 @@
 
 #define USB_REQUEST_TYPE_HANDLER_COUNT 2
 
+typedef void (*CALLBACK_FUNC)(void);
+
+typedef struct _USBResponse
+{
+	uint16_t byteCount;
+	CALLBACK_FUNC callbackFuncP;
+} USBResponse_t;
+
+void ProcessSetupRequest(USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP);
+
 enum DescriptorType
 {
 	DEVICE = 0x01	
@@ -39,7 +49,7 @@ typedef struct _USBStandardDeviceRequest
 	uint16_t length;
 } USBStandardDeviceRequest_t;
 
-typedef void (*SETUP_REQUEST_HANDLER_FUNC)(USBRequest_t *usbRequestP, USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP);
+typedef void (*SETUP_REQUEST_HANDLER_FUNC)(USBRequest_t *usbRequestP, USBResponse_t *usbResponseP, USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP);
 
 typedef struct _SetupRequestHandler
 {
@@ -48,8 +58,5 @@ typedef struct _SetupRequestHandler
 	uint8_t id;
 	SETUP_REQUEST_HANDLER_FUNC handlerFuncP;
 } SetupRequestHandler_t;
-
-void ProcessSetupRequest(USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP);
-
 
 #endif /* USBREQ_H_ */
