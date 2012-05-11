@@ -214,8 +214,3 @@ USBEndpoint_t* USBEndpointTxQueueGetNext(void)
 	
 	return (USBEndpoint_t *)((((uint16_t)usbEndpointTableP->usbEndpointP) + 2) * fifoRP);
 }
-
-inline void USBEndpointAcknowledge(USBEndpoint_t *usbEndpointP)
-{
-	usbEndpointP->status &= ~(1 << 1);
-}

@@ -9,8 +9,8 @@ void USBDeviceReset(void)
 
 void USBDeviceGetDescriptor(USBRequest_t *usbRequestP, USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP)
 {
-	//push the descriptor bytes into the the data buffer
 	USBDeviceDescriptor_t *usbDeviceDescriptorP = (USBDeviceDescriptor_t *)usbEndpointInP->dataBufferP;	
+	
 	usbDeviceDescriptorP->length = sizeof(USBStandardDeviceRequest_t);
 	usbDeviceDescriptorP->descriptorType = DEVICE;
 	usbDeviceDescriptorP->deviceClass = 0x00;
@@ -26,10 +26,7 @@ void USBDeviceGetDescriptor(USBRequest_t *usbRequestP, USBEndpoint_t *usbEndpoin
 	usbDeviceDescriptorP->numberOfConfigurations = 0x01;
 	usbDeviceDescriptorP->usbVersion = 0x0200;
 	
-	// set the number of bytes to send
-	usbEndpointInP->cnt = usbDeviceDescriptorP->length; 
-	usbEndpointInP->auxData = 0;
-	USBEndpointAcknowledge(usbEndpointInP);
+	USBEndpointTransmit(usbEndpointInP, sizeof(USBStandardDeviceRequest_t));
 }
 
 void USBDeviceSetAddress(USBRequest_t *usbRequestP, USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP)

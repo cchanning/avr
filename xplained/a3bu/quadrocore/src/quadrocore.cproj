@@ -95,6 +95,9 @@
     <Compile Include="include\usb\usbep.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="include\usb\usbepio.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="include\usb\usbreq.h">
       <SubType>compile</SubType>
     </Compile>
@@ -111,6 +114,9 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="usb\usbep.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="usb\usbepio.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="usb\usbint.c">

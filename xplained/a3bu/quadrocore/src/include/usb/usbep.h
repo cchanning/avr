@@ -64,6 +64,5 @@ USBEndpoint_t* USBEndpointTxQueueGetNext(void);
 
 void USBEndpointReset(USBEndpoint_t *usbEndpointP, const USBEndpointConfiguration_t const *usbEndpointConfigurationP);
 void USBEndpointResetAll(void);
-void USBEndpointAcknowledge(USBEndpoint_t *usbEndpointP);
 
 #endif /* USBEP_H_ */
