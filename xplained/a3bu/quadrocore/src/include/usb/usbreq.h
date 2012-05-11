@@ -1,6 +1,8 @@
 #ifndef USBREQ_H_
 #define USBREQ_H_
 
+#define USB_ENDPOINT_ACK(endpointP) (endpointP->status &= ~(1 << 1))
+
 #define USB_REQUEST_TYPE_FLD_TYPE_bm 0x60
 #define USB_REQUEST_TYPE_FLD_DPTFD_HD_bm (0 << 7)
 #define USB_REQUEST_TYPE_FLD_DPTFD_DH_bm (1 << 7)
@@ -19,13 +21,27 @@
 
 #define USB_REQUEST_TYPE_HANDLER_COUNT 2
 
-typedef struct _SetupRequestDescriptor
+enum DescriptorType
+{
+	DEVICE = 0x01	
+};
+
+typedef struct _USBRequest
 {
 	uint8_t requestType;
 	uint8_t request;
-} SetupRequestDescriptor_t;
+} USBRequest_t;
 
-typedef void (*SETUP_REQUEST_HANDLER_FUNC)(SetupRequestDescriptor_t *setupRequestDescriptorP, USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP);
+typedef struct _USBStandardDeviceRequest
+{
+	uint8_t requestType;
+	uint8_t request;
+	uint16_t value;
+	uint16_t index;
+	uint16_t length;
+} USBStandardDeviceRequest_t;
+
+typedef void (*SETUP_REQUEST_HANDLER_FUNC)(USBRequest_t *usbRequestP, USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP);
 
 typedef struct _SetupRequestHandler
 {

@@ -25,9 +25,9 @@ SetupRequestHandler_t* SetupRequestHandlerTableGet(void)
 	return SETUP_REQUEST_HANDLER_TABLE;
 }
 
-SetupRequestHandler_t* SetupRequestResolveHandler(SetupRequestDescriptor_t *setupRequestDescriptorP)
+SetupRequestHandler_t* SetupRequestResolveHandler(USBRequest_t *usbRequestP)
 {
-	if (! setupRequestDescriptorP)
+	if (! usbRequestP)
 	{
 		return NULL;
 	}
@@ -41,8 +41,8 @@ SetupRequestHandler_t* SetupRequestResolveHandler(SetupRequestDescriptor_t *setu
 		}
 		
 		//decode the type and recipient from the request
-		uint8_t type = setupRequestDescriptorP->requestType & USB_REQUEST_TYPE_FLD_TYPE_bm;
-		uint8_t recipient = setupRequestDescriptorP->requestType & USB_REQUEST_TYPE_FLD_RECIPIENT_bm;
+		uint8_t type = usbRequestP->requestType & USB_REQUEST_TYPE_FLD_TYPE_bm;
+		uint8_t recipient = usbRequestP->requestType & USB_REQUEST_TYPE_FLD_RECIPIENT_bm;
 		
 		{
 			SetupRequestHandler_t *setupRequestHandlerP = NULL;
@@ -50,7 +50,7 @@ SetupRequestHandler_t* SetupRequestResolveHandler(SetupRequestDescriptor_t *setu
 			for (setupRequestHandlerP = setupRequestHandlerTableP; setupRequestHandlerP < (setupRequestHandlerTableP + USB_REQUEST_TYPE_HANDLER_COUNT); setupRequestHandlerP++)
 			{
 				// if we get match on the id, just double check that we're scoped properly for request just in case request ids are not unique
-				if ((setupRequestHandlerP->id == setupRequestDescriptorP->request) && (setupRequestHandlerP->recipient == recipient) && (setupRequestHandlerP->type == type))
+				if ((setupRequestHandlerP->id == usbRequestP->request) && (setupRequestHandlerP->recipient == recipient) && (setupRequestHandlerP->type == type))
 				{
 					return setupRequestHandlerP;
 				}
@@ -69,14 +69,14 @@ void ProcessSetupRequest(USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpo
 	}
 	
 	{
-		SetupRequestDescriptor_t *setupRequestDescriptorP = (SetupRequestDescriptor_t *)usbEndpointOutP->dataBufferP;
-		SetupRequestHandler_t *setupRequestHandlerP = SetupRequestResolveHandler(setupRequestDescriptorP);
+		USBRequest_t *usbRequestP = (USBRequest_t *)usbEndpointOutP->dataBufferP;
+		SetupRequestHandler_t *setupRequestHandlerP = SetupRequestResolveHandler(usbRequestP);
 		
 		if (! setupRequestHandlerP)
 		{
 			return;
 		}
 		
-		(*setupRequestHandlerP->handlerFuncP)(setupRequestDescriptorP, usbEndpointOutP, usbEndpointInP);		
+		(*setupRequestHandlerP->handlerFuncP)(usbRequestP, usbEndpointOutP, usbEndpointInP);		
 	}
 }

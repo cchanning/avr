@@ -7,8 +7,7 @@ int main(void)
 		.usbEndpointTableConfiguration = 
 		{
 			.endpointCount = 1,
-			
-			// default endpoint configuration
+			.maxPacketSize = 32,
 			.endpointConfiguration[0] = 
 			{
 				.type = USB_EP_TYPE_CONTROL_gc,
@@ -22,7 +21,7 @@ int main(void)
 	{
 		SystemClockInit();
 		PMICInit(PMIC_HILVLEN_bm);
-		USBModuleInit(&usbConfiguration);		
+		USBModuleInit(&usbConfiguration);
 	}
 	EnableGlobalInterrupts();
 	

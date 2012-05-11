@@ -156,7 +156,7 @@ bool USBEndpointTableAlloc(const USBEndpointTableConfiguration_t const *usbEndpo
 			The only way around this is to make sure the address is even, hence the additional "padding" added to the
 			memory allocation. If the address is odd then we simply increment it by one byte. 
 		 */
-		if (((uint8_t)usbEndpointTableP->usbEndpointP % 2) != 0)
+		if (((uint16_t)usbEndpointTableP->usbEndpointP % 2) != 0)
 		{
 			usbEndpointTableP->usbEndpointP = (USBEndpoint_t *)(((uint8_t *)usbEndpointTableP->usbEndpointP) + 1);
 		}

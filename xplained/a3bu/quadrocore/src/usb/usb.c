@@ -9,7 +9,6 @@ bool USBModuleInit(const USBConfiguration_t *usbConfigurationP)
 		
 	//set the USB module EPPTR register (so it will know where the endpoint table configuration lives)
 	USB.EPPTR = ((uint16_t)USBEndpointTableGet()->usbEndpointP);
-	uint16_t v = (uint16_t)USBEndpointTableGet()->usbEndpointP;
 	
 	//load the USB calibration data from the device production row into the USB calibration registers
 	NVM.CMD = NVM_CMD_READ_CALIB_ROW_gc; 

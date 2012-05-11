@@ -21,6 +21,7 @@ typedef struct _USBEndpointConfiguration
 typedef struct _USBEndpointTableConfiguration
 {
 	uint8_t endpointCount;
+	uint8_t maxPacketSize;
 	USBEndpointConfiguration_t endpointConfiguration[1];
 } USBEndpointTableConfiguration_t;
 
