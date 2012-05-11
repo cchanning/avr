@@ -62,7 +62,8 @@ USBEndpoint_t* USBEndpointGet(uint8_t endpointNumber, EndpointDirection endpoint
 USBEndpoint_t* USBEndpointGetDefault(EndpointDirection endpointDirection);
 USBEndpoint_t* USBEndpointTxQueueGetNext(void);
 
-void USBEndpointReset(USBEndpoint_t *usbEndpoint, const USBEndpointConfiguration_t const *usbEndpointConfigurationP);
+void USBEndpointReset(USBEndpoint_t *usbEndpointP, const USBEndpointConfiguration_t const *usbEndpointConfigurationP);
 void USBEndpointResetAll(void);
+void USBEndpointAcknowledge(USBEndpoint_t *usbEndpointP);
 
 #endif /* USBEP_H_ */

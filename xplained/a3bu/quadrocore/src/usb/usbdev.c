@@ -29,7 +29,7 @@ void USBDeviceGetDescriptor(USBRequest_t *usbRequestP, USBEndpoint_t *usbEndpoin
 	// set the number of bytes to send
 	usbEndpointInP->cnt = usbDeviceDescriptorP->length; 
 	usbEndpointInP->auxData = 0;
-	USB_ENDPOINT_ACK(usbEndpointInP);
+	USBEndpointAcknowledge(usbEndpointInP);
 }
 
 void USBDeviceSetAddress(USBRequest_t *usbRequestP, USBEndpoint_t *usbEndpointOutP, USBEndpoint_t *usbEndpointInP)

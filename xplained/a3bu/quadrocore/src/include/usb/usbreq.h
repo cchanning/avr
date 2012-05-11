@@ -1,8 +1,6 @@
 #ifndef USBREQ_H_
 #define USBREQ_H_
 
-#define USB_ENDPOINT_ACK(endpointP) (endpointP->status &= ~(1 << 1))
-
 #define USB_REQUEST_TYPE_FLD_TYPE_bm 0x60
 #define USB_REQUEST_TYPE_FLD_DPTFD_HD_bm (0 << 7)
 #define USB_REQUEST_TYPE_FLD_DPTFD_DH_bm (1 << 7)
