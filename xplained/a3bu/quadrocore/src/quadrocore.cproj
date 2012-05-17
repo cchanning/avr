@@ -45,101 +45,120 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <ToolchainSettings>
       <AvrGcc xmlns="">
-  <avrgcc.common.outputfiles.hex>True</avrgcc.common.outputfiles.hex>
-  <avrgcc.common.outputfiles.lss>True</avrgcc.common.outputfiles.lss>
-  <avrgcc.common.outputfiles.eep>True</avrgcc.common.outputfiles.eep>
-  <avrgcc.compiler.directories.IncludePaths>
-    <ListValues>
-      <Value>../include</Value>
-    </ListValues>
-  </avrgcc.compiler.directories.IncludePaths>
-  <avrgcc.compiler.optimization.level>Optimize (-O1)</avrgcc.compiler.optimization.level>
-</AvrGcc>
+        <avrgcc.common.outputfiles.hex>True</avrgcc.common.outputfiles.hex>
+        <avrgcc.common.outputfiles.lss>True</avrgcc.common.outputfiles.lss>
+        <avrgcc.common.outputfiles.eep>True</avrgcc.common.outputfiles.eep>
+        <avrgcc.compiler.directories.IncludePaths>
+          <ListValues>
+            <Value>../include</Value>
+          </ListValues>
+        </avrgcc.compiler.directories.IncludePaths>
+        <avrgcc.compiler.optimization.level>Optimize (-O1)</avrgcc.compiler.optimization.level>
+      </AvrGcc>
     </ToolchainSettings>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <ToolchainSettings>
       <AvrGcc xmlns="">
-  <avrgcc.common.outputfiles.hex>True</avrgcc.common.outputfiles.hex>
-  <avrgcc.common.outputfiles.lss>True</avrgcc.common.outputfiles.lss>
-  <avrgcc.common.outputfiles.eep>True</avrgcc.common.outputfiles.eep>
-  <avrgcc.compiler.directories.IncludePaths>
-    <ListValues>
-      <Value>../include</Value>
-    </ListValues>
-  </avrgcc.compiler.directories.IncludePaths>
-  <avrgcc.compiler.optimization.DebugLevel>Maximum (-g3)</avrgcc.compiler.optimization.DebugLevel>
-  <avrgcc.compiler.miscellaneous.Verbose>True</avrgcc.compiler.miscellaneous.Verbose>
-  <avrgcc.assembler.debugging.DebugLevel>Default (-Wa,-g)</avrgcc.assembler.debugging.DebugLevel>
-</AvrGcc>
+        <avrgcc.common.outputfiles.hex>True</avrgcc.common.outputfiles.hex>
+        <avrgcc.common.outputfiles.lss>True</avrgcc.common.outputfiles.lss>
+        <avrgcc.common.outputfiles.eep>True</avrgcc.common.outputfiles.eep>
+        <avrgcc.compiler.directories.IncludePaths>
+          <ListValues>
+            <Value>../include</Value>
+          </ListValues>
+        </avrgcc.compiler.directories.IncludePaths>
+        <avrgcc.compiler.optimization.DebugLevel>Maximum (-g3)</avrgcc.compiler.optimization.DebugLevel>
+        <avrgcc.compiler.miscellaneous.Verbose>True</avrgcc.compiler.miscellaneous.Verbose>
+        <avrgcc.assembler.debugging.DebugLevel>Default (-Wa,-g)</avrgcc.assembler.debugging.DebugLevel>
+      </AvrGcc>
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="clock.c">
+    <Compile Include="ccp\ccp.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="ccp.c">
+    <Compile Include="clock\clock.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\clock.h">
+    <Compile Include="include\ccp\ccp.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\ccp.h">
+    <Compile Include="include\clock\clock.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\pmic.h">
+    <Compile Include="include\pmic\pmic.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="include\quadrocore.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\type.h">
+    <Compile Include="include\type\typedefs.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\type\vector.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\type\type.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\usb\io\usbep.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\usb\io\usbio.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\usb\io\usbstddreq.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="include\usb\io\usbstdreq.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="include\usb\usb.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\usb\usbdev.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="include\usb\usbep.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="include\usb\usbepio.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="include\usb\usbreq.h">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="pmic.c">
+    <Compile Include="pmic\pmic.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="quadrocore.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="type\vector.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="usb\io\usbep.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="usb\io\usbio.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="usb\io\usbstddreq.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="usb\io\usbstdreq.c">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="usb\usb.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="usb\usbdev.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="usb\usbep.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="usb\usbepio.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="usb\usbint.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="usb\usbreq.c">
-      <SubType>compile</SubType>
-    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="include" />
+    <Folder Include="include\clock" />
+    <Folder Include="include\ccp" />
+    <Folder Include="include\type" />
+    <Folder Include="include\pmic" />
     <Folder Include="include\usb" />
+    <Folder Include="include\usb\io" />
+    <Folder Include="clock" />
+    <Folder Include="ccp" />
+    <Folder Include="type" />
+    <Folder Include="pmic" />
     <Folder Include="usb" />
+    <Folder Include="usb\io" />
   </ItemGroup>
   <ItemGroup>
     <None Include="usb.asm.old">

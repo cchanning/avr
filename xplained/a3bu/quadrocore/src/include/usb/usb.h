@@ -1,8 +1,12 @@
 #ifndef USB_H_
 #define USB_H_
 
-#include "usb/usbep.h"
-#include "type.h"
+#include "usb/io/usbep.h"
+#include "usb/io/usbep.h"
+#include "usb/io/usbio.h"
+#include "usb/io/usbstdreq.h"
+#include "usb/io/usbstddreq.h"
+#include "type/type.h"
 
 typedef struct _USBConfiguration
 {

@@ -11,14 +11,10 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 
-#include "clock.h"
-#include "ccp.h"
-#include "pmic.h"
-#include "type.h"
+#include "clock/clock.h"
+#include "ccp/ccp.h"
+#include "pmic/pmic.h"
 #include "usb/usb.h"
-#include "usb/usbdev.h"
-#include "usb/usbep.h"
-#include "usb/usbreq.h"
-#include "usb/usbepio.h"
+#include "type/type.h"
 
 #endif /* QUADROCORE_H_ */
