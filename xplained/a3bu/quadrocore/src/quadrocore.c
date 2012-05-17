@@ -28,7 +28,7 @@ int main(void)
 	ptr_t p2 = VectorAddRow(vectorP, &vP);
 	
 	// add row gives us back a void pointer to a pointer of type X. We know that a pointer is 2 bytes wide on the 8bit avr. So we need to cast the original void pointer to a uint16_t pointer type
-	// to allow use to read the address bytes (2 of them) that the void * points at. This value will be the deferenced value of the pointer we added to the vector (in this case the address of the original pointer). Once we have the address value we can then
+	// to allow use to deference the void pointer and read the address bytes (2 of them) that the void * points at. This value will be the deferenced value of the pointer we added to the vector (in this case the address of the original pointer). Once we have the address value we can then
 	// cast it to the original pointer type...in this case a uint8_t*.
 	uint8_t pv = *((uint8_t*)(*((uint16_t*)p1)));
 	uint8_t *fun = VectorGetRowByIndex(vectorP, 0, uint8_t*);
