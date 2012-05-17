@@ -52,15 +52,13 @@ ptr_t VectorAddRow(Vector_t *vectorP, ptr_t rowP)
 	return newRowP;
 }
 
-bool VectorRemoveRow(Vector_t *vectorP, ptr_t rowP)
+bool_t VectorRemoveRow(Vector_t *vectorP, ptr_t rowP)
 {
 	return true;
 }
 
-bool VectorGrow(Vector_t *vectorP)
+bool_t VectorGrow(Vector_t *vectorP)
 {
-	bool grown = false;
-	
 	if (! vectorP)
 	{
 		return false;

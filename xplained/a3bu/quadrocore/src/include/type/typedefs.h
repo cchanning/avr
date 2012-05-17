@@ -6,7 +6,7 @@
 
 typedef void (*CALLBACK_FUNC)(void*);
 
-typedef _Bool	bool;
+typedef _Bool	bool_t;
 typedef signed char sint8_t;
 typedef void* ptr_t;
 

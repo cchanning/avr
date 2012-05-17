@@ -1,6 +1,6 @@
 #include "quadrocore.h"
 
-static bool usbSetupRequestHandlerTableInitialized = false;
+static bool_t usbSetupRequestHandlerTableInitialized = false;
 static USBStandardRequestHandler_t USB_STANDARD_REQUEST_HANDLER_TABLE[USB_REQUEST_TYPE_HANDLER_COUNT];
 
 USBStandardRequestHandler_t* USBStandardRequestHandlerTableGet(void)

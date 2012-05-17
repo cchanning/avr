@@ -47,7 +47,7 @@ void USBEndpointReset(USBEndpoint_t *usbEndpointP, const USBEndpointConfiguratio
 	}
 }
 
-bool USBEndpointInit(USBEndpoint_t *usbEndpointP, const USBEndpointConfiguration_t const *usbEndpointConfigurationP)
+bool_t USBEndpointInit(USBEndpoint_t *usbEndpointP, const USBEndpointConfiguration_t const *usbEndpointConfigurationP)
 {
 	if (! usbEndpointP)
 	{
@@ -112,7 +112,7 @@ USBEndpointTable_t* USBEndpointTableGet(void)
 	return usbEndpointTableP;
 }
 
-bool USBEndpointTableAlloc(const USBEndpointTableConfiguration_t const *usbEndpointTableConfigurationP)
+bool_t USBEndpointTableAlloc(const USBEndpointTableConfiguration_t const *usbEndpointTableConfigurationP)
 {		
 	if (usbEndpointTableP)
 	{

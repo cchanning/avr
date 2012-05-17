@@ -15,7 +15,7 @@ typedef struct _Vector
 
 Vector_t* VectorAlloc(uint8_t incUnit, uint16_t rowSize);
 ptr_t VectorAddRow(Vector_t *vectorP, ptr_t rowP);
-bool VectorRemoveRow(Vector_t *vectorP, ptr_t rowP);
-bool VectorGrow(Vector_t *vectorP);
+bool_t VectorRemoveRow(Vector_t *vectorP, ptr_t rowP);
+bool_t VectorGrow(Vector_t *vectorP);
 
 #endif /* VECTOR_H_ */

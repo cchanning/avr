@@ -1,6 +1,6 @@
 #include "quadrocore.h"
 
-bool USBModuleInit(const USBConfiguration_t *usbConfigurationP)
+bool_t USBModuleInit(const USBConfiguration_t *usbConfigurationP)
 {
 	if (! USBEndpointTableAlloc(&usbConfigurationP->usbEndpointTableConfiguration))
 	{

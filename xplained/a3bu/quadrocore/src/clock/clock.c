@@ -1,6 +1,6 @@
 #include "quadrocore.h"
 
-bool R32OscillatorInit(void)
+bool_t R32OscillatorInit(void)
 {
 	//switch on the RC32Mhz internal oscillator
 	OSC.CTRL |= OSC_RC32MEN_bm;
@@ -19,7 +19,7 @@ bool R32OscillatorInit(void)
   * to the PLL to 8mhz (div 4) before we even get to touch it. The PLL multiplication factor is set at 6 to scale the required clock frequency up to 48mhz. 
   * This will allow the PLL to be used as a clock source for the USB.
   */
-bool PLLInit(void)
+bool_t PLLInit(void)
 {
 	if (! R32OscillatorInit())
 	{
@@ -40,7 +40,7 @@ bool PLLInit(void)
 	return true;
 }
 
-bool SystemClockInit(void)
+bool_t SystemClockInit(void)
 {
 	if (! PLLInit())
 	{

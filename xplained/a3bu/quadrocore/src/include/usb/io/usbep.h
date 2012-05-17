@@ -55,7 +55,7 @@ typedef enum _EndpointDirection
 } EndpointDirection;
 
 
-bool USBEndpointTableAlloc(const USBEndpointTableConfiguration_t const *usbEndpointTableConfigurationP);
+bool_t USBEndpointTableAlloc(const USBEndpointTableConfiguration_t const *usbEndpointTableConfigurationP);
 
 USBEndpointTable_t* USBEndpointTableGet(void);
 USBEndpoint_t* USBEndpointGet(uint8_t endpointNumber, EndpointDirection endpointDirection);

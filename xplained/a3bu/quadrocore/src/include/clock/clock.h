@@ -3,7 +3,7 @@
 
 #include "type/type.h"
 
-bool SystemClockInit(void);
+bool_t SystemClockInit(void);
 
 
 #endif /* CLOCK_H_ */
