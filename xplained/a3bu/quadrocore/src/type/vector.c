@@ -19,6 +19,24 @@
 
 #include "quadrocore.h"
 
+void VectorZeroRow(Vector_t *vectorP, ptr_t rowP)
+{
+	if ((! vectorP) || (! rowP))
+	{
+		return;
+	}
+	
+	{
+		uint8_t *ptrBase = (uint8_t *)rowP;
+		uint8_t *ptr = ptrBase;
+		
+		for ( ; ptr < (ptrBase + vectorP->rowSize); ptr++)
+		{
+			*ptr = 0;
+		}
+	}
+}
+
 Vector_t* VectorAlloc(uint8_t incUnit, uint16_t rowSize)
 {
 	Vector_t *vectorP = NULL;
@@ -42,28 +60,6 @@ Vector_t* VectorAlloc(uint8_t incUnit, uint16_t rowSize)
 	return vectorP;
 }
 
-ptr_t VectorAddRow(Vector_t *vectorP, ptr_t rowP)
-{
-	ptr_t newRowP = NULL;
-	
-	if (! vectorP)
-	{
-		return NULL;
-	}
-	
-	if (! (newRowP = VectorCreateRow(vectorP)))
-	{
-		return NULL;
-	}
-	
-	if (! memcpy(newRowP, rowP, vectorP->rowSize))
-	{
-		return NULL;
-	}	
-	
-	return newRowP;
-}
-
 ptr_t VectorCreateRow(Vector_t *vectorP)
 {
 	ptr_t newRowP = NULL;
@@ -83,13 +79,50 @@ ptr_t VectorCreateRow(Vector_t *vectorP)
 	
 	newRowP = (ptr_t)((uint8_t *)vectorP->rowP) + (vectorP->rowCount * vectorP->rowSize);
 	vectorP->rowCount++;
+	VectorZeroRow(vectorP, newRowP);
 	
 	return newRowP;
-		
+	
 }
 
-bool_t VectorRemoveRow(Vector_t *vectorP, ptr_t rowP)
+bool_t VectorAddRow(Vector_t *vectorP, ptr_t rowP)
 {
+	ptr_t newRowP = NULL;
+	
+	if (! vectorP)
+	{
+		return false;
+	}
+	
+	if (! (newRowP = VectorCreateRow(vectorP)))
+	{
+		return false;
+	}
+	
+	if (! memcpy(newRowP, rowP, vectorP->rowSize))
+	{
+		return false;
+	}	
+	
+	return true;
+}
+
+bool_t VectorRemoveRow(Vector_t *vectorP, uint16_t rowIndex)
+{
+	if ((! vectorP) || (rowIndex < 0) || (vectorP->rowCount == 0) || ((rowIndex + 1) > vectorP->rowCount))
+	{
+		return false;
+	}
+	
+	vectorP->rowCount--;
+	{
+		ptr_t destP = (ptr_t)(vectorP->rowP + (rowIndex * vectorP->rowSize));
+		ptr_t sourceP = (ptr_t)(destP + vectorP->rowSize);
+		uint16_t size = (vectorP->rowCount - rowIndex) * vectorP->rowSize;
+		memcpy(destP, sourceP, size);
+		VectorZeroRow(vectorP, vectorP->rowP + (vectorP->rowCount * vectorP->rowSize));
+	}
+	
 	return true;
 }
 
@@ -118,4 +151,20 @@ uint16_t VectorSize(Vector_t *vectorP)
 	}
 	
 	return vectorP->rowCount;
+}
+
+void VectorClear(Vector_t *vectorP)
+{
+	if (! vectorP) return;
+	
+	{
+		void *rowP = vectorP->rowP;
+		
+		for ( ; rowP < (vectorP->rowP + (vectorP->rowCount * vectorP->rowSize)); rowP = rowP + vectorP->rowSize)
+		{
+			VectorZeroRow(vectorP, rowP);
+		}
+		
+		vectorP->rowCount = 0;
+	}
 }

@@ -27,23 +27,16 @@
  *	uint8_t value = 1;
  *	uint8_t *valueP = &value;
  *	Vector_t *vectorP = VectorAlloc(1, sizeof(ptr_t));
- *	ptr_t p1 = VectorAddRow(vectorP, &vP);
- *	uint8_t *rowP = VectorGetRowPtr(vectorP, p1, uint8_t*)
+ *	VectorAddRow(vectorP, &valueP);
+ *	uint8_t *rowP = VectorGetDeferencedRow(vectorP, 0, uint8_t*)
  *		
  */
-#define VectorGetDeferencedRowByIndex(vectorP, index, type) ( (type)*((uint16_t*)(vectorP->rowP + (index * vectorP->rowSize))) )
-#define VectorGetDeferencedRow(vectorP, rowP, type) ( (type)*((uint16_t*)(rowP)) )
+#define VectorGetDeferencedRow(vectorP, index, type) ( (type)*((uint16_t*)(vectorP->rowP + (index * vectorP->rowSize))) )
 
 /**
- *	These macros should be used when storing blocks of memory in a vector. For example:
- *	
- *	Vector_t *vectorP = VectorAlloc(1, sizeof(AStruct_t));
- *	ptr_t p1 = VectorCreateRow(vectorP);
- *	AStruct_t *aStructP = VectorGetRow(vectorP, p1, AStruct_t*);
- *		
+ *	These macros should be used when storing blocks of memory in a vector. 	
  */
-#define VectorGetRowByIndex(vectorP, index, type) ( (type)(vectorP->rowP + (index * vectorP->rowSize) )
-#define VectorGetRow(vectorP, rowP, type) ( (type)rowP )
+#define VectorGetRow(vectorP, index, type) ( (type)(vectorP->rowP + (index * vectorP->rowSize) )
 
 typedef struct _Vector
 {
@@ -64,6 +57,15 @@ typedef struct _Vector
 Vector_t* VectorAlloc(uint8_t incUnit, uint16_t rowSize);
 
 /**
+ * Creates a row within the vector. Note that the pointer returned should not be stored as it could
+ * be invalidated if rows are removed, throw it away once your target structure etc has been initialised.
+ *
+ * @param vectorP a pointer to the vector
+ * @return a temporary pointer to the block of memory (rowSize)
+ */
+ptr_t VectorCreateRow(Vector_t *vectorP);
+
+/**
  * Adds a row within the vector memory block and copy the dereferenced contents of the
  * row. Pointers may be stored directly within the vector provided the address of the pointer that is required 
  * to be stored is passed in, this will ensure that the address of the "real" pointer is copied correctly. 
@@ -77,27 +79,19 @@ Vector_t* VectorAlloc(uint8_t incUnit, uint16_t rowSize);
  *
  * @param vectorP a pointer to the vector
  * @param rowP a pointer to the row to be copied
- * @return a pointer to the block of memory containing a copy of the dereferenced row bytes
+ * @return if the add was successful
  */
-ptr_t VectorAddRow(Vector_t *vectorP, ptr_t rowP);
+bool_t VectorAddRow(Vector_t *vectorP, ptr_t rowP);
 
 /**
- * Creates a row within the vector determined by row size.
+ * Removes the specified row from the vector, note that the removal may cause the
+ * vector elements to be realigned
  *
  * @param vectorP a pointer to the vector
- * @return a pointer to the block of memory large enough to hold a row
- */
-ptr_t VectorCreateRow(Vector_t *vectorP);
-
-/**
- * Removes the specified row from the vector, note that the removal will cause the
- * vector elements to be realigned.
- *
- * @param vectorP a pointer to the vector
- * @param rowP a pointer to the row
+ * @param index a row index
  * @return if the the row was removed successfully
  */
-bool_t VectorRemoveRow(Vector_t *vectorP, ptr_t rowP);
+bool_t VectorRemoveRow(Vector_t *vectorP, uint16_t rowIndex);
 
 /**
  * Expands the vector by vectorP->incUnit.
@@ -114,5 +108,12 @@ bool_t VectorGrow(Vector_t *vectorP);
  * @return the size of the vector (row count)
  */
 uint16_t VectorSize(Vector_t *vectorP);
+
+/**
+ * Clears the vector.
+ *
+ * @param vectorP a pointer to the vector
+ */
+void VectorClear(Vector_t *vectorP);
 
 #endif /* VECTOR_H_ */
