@@ -109,3 +109,13 @@ bool_t VectorGrow(Vector_t *vectorP)
 	
 	return true;
 }
+
+uint16_t VectorSize(Vector_t *vectorP)
+{
+	if (! vectorP)
+	{
+		return 0;
+	}
+	
+	return vectorP->rowCount;
+}
