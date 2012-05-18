@@ -1,3 +1,22 @@
+/***********************************************************************************************************************
+ * 
+ * > QuadroCore <
+ * 
+ * Copyright (C) 2012 by Chris Channing
+ *
+ ***********************************************************************************************************************
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ ***********************************************************************************************************************/
+
 #include "quadrocore.h"
 
 Vector_t* VectorAlloc(uint8_t incUnit, uint16_t rowSize)
@@ -32,6 +51,28 @@ ptr_t VectorAddRow(Vector_t *vectorP, ptr_t rowP)
 		return NULL;
 	}
 	
+	if (! (newRowP = VectorCreateRow(vectorP)))
+	{
+		return NULL;
+	}
+	
+	if (! memcpy(newRowP, rowP, vectorP->rowSize))
+	{
+		return NULL;
+	}	
+	
+	return newRowP;
+}
+
+ptr_t VectorCreateRow(Vector_t *vectorP)
+{
+	ptr_t newRowP = NULL;
+	
+	if (! vectorP)
+	{
+		return NULL;
+	}
+	
 	if (vectorP->rowCount == vectorP->maxRows)
 	{
 		if (! VectorGrow(vectorP))
@@ -41,15 +82,10 @@ ptr_t VectorAddRow(Vector_t *vectorP, ptr_t rowP)
 	}
 	
 	newRowP = (ptr_t)((uint8_t *)vectorP->rowP) + (vectorP->rowCount * vectorP->rowSize);
-	
-	if (! memcpy(newRowP, rowP, vectorP->rowSize))
-	{
-		return NULL;
-	}
-	
-	vectorP->rowCount++;		
+	vectorP->rowCount++;
 	
 	return newRowP;
+		
 }
 
 bool_t VectorRemoveRow(Vector_t *vectorP, ptr_t rowP)

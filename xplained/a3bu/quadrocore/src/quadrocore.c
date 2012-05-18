@@ -1,3 +1,22 @@
+/***********************************************************************************************************************
+ * 
+ * > QuadroCore <
+ * 
+ * Copyright (C) 2012 by Chris Channing
+ *
+ ***********************************************************************************************************************
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ ***********************************************************************************************************************/
+
 #include "quadrocore.h"
 
 int main(void)
@@ -27,12 +46,17 @@ int main(void)
 	ptr_t p1 = VectorAddRow(vectorP, &vP);
 	ptr_t p2 = VectorAddRow(vectorP, &vP);
 	
+	Vector_t *vector2P = VectorAlloc(1, sizeof(USBTransfer_t));
+	ptr_t p3 = VectorCreateRow(vector2P);
+	USBTransfer_t *usbTransferP = VectorGetRow(vector2P, p3 , USBTransfer_t *);
+	usbTransferP->transactionCount = 2;
+	
 	// add row gives us back a void pointer to a pointer of type X. We know that a pointer is 2 bytes wide on the 8bit avr. So we need to cast the original void pointer to a uint16_t pointer type
 	// to allow use to deference the void pointer and read the address bytes (2 of them) that the void * points at. This value will be the deferenced value of the pointer we added to the vector (in this case the address of the original pointer). Once we have the address value we can then
 	// cast it to the original pointer type...in this case a uint8_t*.
 	uint8_t pv = *((uint8_t*)(*((uint16_t*)p1)));
-	uint8_t *fun = VectorGetRowByIndex(vectorP, 0, uint8_t*);
-	fun = VectorGetRow(vectorP, p1, uint8_t*);
+	uint8_t *fun = VectorGetDeferencedRowByIndex(vectorP, 0, uint8_t*);
+	fun = VectorGetDeferencedRow(vectorP, p1, uint8_t*);
 	
 	DisableGlobalInterrupts();
 	{
