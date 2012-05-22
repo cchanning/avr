@@ -46,6 +46,8 @@ void USBDeviceGetDescriptor(USBStandardRequest_t *usbStandardRequestP, USBRespon
 	usbStandardDeviceDescriptorP->usbVersion = 0x0200;
 	
 	usbResponseP->byteCount = usbStandardDeviceDescriptorP->length;
+	PORTR.DIR = 0xff;
+	PORTR.OUTSET = 0x00;
 }
 
 void USBDeviceSetAddress(USBStandardRequest_t *usbStandardRequestP, USBResponse_t *usbResponseP, USBTransfer_t *usbTransferP)
