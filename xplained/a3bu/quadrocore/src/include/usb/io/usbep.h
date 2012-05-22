@@ -70,13 +70,6 @@ typedef struct _USBEndpointTable
 
 } USBEndpointTable_t;
 
-typedef enum _EndpointPipeDirection
-{
-	OUT,
-	IN
-} EndpointPipeDirection;
-
-
 bool_t USBEndpointTableInit(const USBEndpointTableConfiguration_t const *usbEndpointTableConfigurationP);
 uint16_t USBEndpointTableGetBaseAddress(void);
 
