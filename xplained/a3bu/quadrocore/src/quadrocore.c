@@ -25,14 +25,14 @@ int main(void)
 	{
 		.usbEndpointTableConfiguration = 
 		{
-			.endpointCount = 4,
-			.maxPacketSize = 32,
+			.endpointCount = 1,
+			.maxPacketSize = 64,
 			.endpointConfiguration[0] = 
 			{
 				.type = USB_EP_TYPE_CONTROL_gc,
-				.bufferSize = 32,
-				.bufferType = USB_EP_BUFSIZE_32_gc,
-				.maxPacketSize = 32
+				.bufferSize = 64,
+				.bufferType = USB_EP_BUFSIZE_64_gc,
+				.maxPacketSize = 64
 			}
 		}			
 	};
@@ -41,7 +41,7 @@ int main(void)
 	{
 		SystemClockInit();
 		PMICInit(PMIC_HILVLEN_bm);
-		USBModuleInit(&usbConfiguration);		
+		USBModuleInit(&usbConfiguration);
 	}
 	EnableGlobalInterrupts();
 	

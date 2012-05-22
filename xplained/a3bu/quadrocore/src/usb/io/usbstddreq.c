@@ -19,10 +19,12 @@
 
 #include "quadrocore.h"
 
+void USBDeviceSetAddressCallback(ptr_t dataP);
+
 void USBDeviceReset(void)
 {
 	USBEndpointResetAll();
-	USBDeviceSetAddress(NULL, NULL, NULL);
+	USBDeviceSetAddress(0);
 	USB.STATUS &= ~USB_BUSRST_bm;
 }
 
@@ -30,7 +32,7 @@ void USBDeviceGetDescriptor(USBStandardRequest_t *usbStandardRequestP, USBRespon
 {
 	USBStandardDeviceDescriptor_t *usbStandardDeviceDescriptorP = (USBStandardDeviceDescriptor_t *)usbTransferP->usbEndpointP->usbEndpointInPipeP->dataBufferP;
 	
-	usbStandardDeviceDescriptorP->length = sizeof(USBStandardDeviceRequest_t);
+	usbStandardDeviceDescriptorP->length = sizeof(USBStandardDeviceDescriptor_t);
 	usbStandardDeviceDescriptorP->descriptorType = DEVICE;
 	usbStandardDeviceDescriptorP->deviceClass = 0x00;
 	usbStandardDeviceDescriptorP->deviceSubClass = 0x00;
@@ -46,11 +48,40 @@ void USBDeviceGetDescriptor(USBStandardRequest_t *usbStandardRequestP, USBRespon
 	usbStandardDeviceDescriptorP->usbVersion = 0x0200;
 	
 	usbResponseP->byteCount = usbStandardDeviceDescriptorP->length;
-	PORTR.DIR = 0xff;
-	PORTR.OUTSET = 0x00;
 }
 
-void USBDeviceSetAddress(USBStandardRequest_t *usbStandardRequestP, USBResponse_t *usbResponseP, USBTransfer_t *usbTransferP)
+void USBDeviceSetDeferredAddress(USBStandardRequest_t *usbStandardRequestP, USBResponse_t *usbResponseP, USBTransfer_t *usbTransferP)
 {
+	uint8_t address = ((USBStandardDeviceRequest_t*)usbStandardRequestP)->value;
+	
+	if (! (usbTransferP->callbackDataP = calloc(1, sizeof(uint8_t))))
+	{
+		return;
+	}
+	
+	*((uint8_t*)usbTransferP->callbackDataP) = address;
+	usbTransferP->callbackFuncP = &USBDeviceSetAddressCallback;
+	
 	usbResponseP->byteCount = 0;
+}
+
+void USBDeviceSetAddressCallback(ptr_t dataP)
+{
+	if (! dataP)
+	{
+		return;
+	}
+	
+	USBDeviceSetAddress(*((uint8_t *)dataP));
+}
+
+void USBDeviceSetAddress(uint8_t address)
+{
+	USB.ADDR = (register8_t)address;
+	
+	if (address > 0)
+	{
+		PORTR.DIR = 0xff;
+		PORTR.OUTSET = 0x00;
+	}	
 }

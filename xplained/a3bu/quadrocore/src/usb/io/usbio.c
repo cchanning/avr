@@ -57,10 +57,14 @@ bool_t USBTransferTableInit(USBEndpointTableConfiguration_t *usbEndpointTableCon
 
 void USBEndpointTransmit(USBEndpoint_t *usbEndpointP, size_t byteCount)
 {
+	USBEndpointPipe_t *usbEndpointOutPipeP = usbEndpointP->usbEndpointOutPipeP;
 	USBEndpointPipe_t *usbEndpointInPipeP = usbEndpointP->usbEndpointInPipeP;
+	
 	usbEndpointInPipeP->auxData = 0;
-	usbEndpointInPipeP->cnt = byteCount;
-	usbEndpointInPipeP->status &= ~(1 << 1);;
+	usbEndpointInPipeP->cnt = USB_EP_ZLP_bm | byteCount;
+	usbEndpointInPipeP->status &= ~(1 << 1);
+	
+	usbEndpointOutPipeP->status &= ~(1 << 1);
 }
 
 USBTransfer_t* USBGetTransfer(USBEndpoint_t *usbEndpointP)

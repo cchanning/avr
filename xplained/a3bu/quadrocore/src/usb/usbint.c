@@ -19,6 +19,8 @@
 
 #include "quadrocore.h"
 
+static USBTransfer_t *usbTransferP = NULL;
+
 ISR(USB_BUSEVENT_vect)
 {
 	DisableGlobalInterrupts();
@@ -71,17 +73,34 @@ ISR(USB_TRNCOMPL_vect)
 {	
 	DisableGlobalInterrupts();
 	{	
+		//temp until we setup the transfer table
+		if (! usbTransferP)
+		{
+			usbTransferP = calloc(1, sizeof(USBTransfer_t));
+			usbTransferP->usbEndpointP = USBEndpointGetDefault();
+			usbTransferP->callbackDataP = NULL;
+			usbTransferP->callbackFuncP = NULL;
+		}
+		
 		if (USB.INTFLAGSBSET & USB_SETUPIF_bm)
 		{
-			//we'll need to look this up from the transfer table
-			USBTransfer_t usbTransfer;
-			usbTransfer.usbEndpointP = USBEndpointGetDefault();
-			USBProcessStandardRequest(&usbTransfer);
+			USBProcessStandardRequest(usbTransferP);
 			USB.INTFLAGSBCLR = USB_SETUPIF_bm;	
 		}
 		
 		if (USB.INTFLAGSBSET & USB_TRNIF_bm)
 		{
+			if (usbTransferP->callbackFuncP)
+			{
+				(*usbTransferP->callbackFuncP)(usbTransferP->callbackDataP);
+				free(usbTransferP->callbackDataP);
+				usbTransferP->callbackFuncP = NULL;
+				usbTransferP->callbackDataP = NULL;
+			}
+			
+			usbTransferP->usbEndpointP->usbEndpointInPipeP->status &= ~(1 << 1);
+			usbTransferP->usbEndpointP->usbEndpointOutPipeP->status &= ~(1 << 1);
+			
 			USB.INTFLAGSBCLR = USB_TRNIF_bm;
 		}
 	}	

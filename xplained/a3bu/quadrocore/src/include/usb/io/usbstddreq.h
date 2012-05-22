@@ -51,7 +51,8 @@ typedef struct _USBStandardDeviceDescriptor
 
 void USBDeviceReset(void);
 void USBDeviceGetDescriptor(USBStandardRequest_t *usbStandardRequestP, USBResponse_t *usbResponseP, USBTransfer_t *usbTransferP);
-void USBDeviceSetAddress(USBStandardRequest_t *usbStandardRequestP, USBResponse_t *usbResponseP, USBTransfer_t *usbTransferP);
+void USBDeviceSetAddress(uint8_t address);
+void USBDeviceSetDeferredAddress(USBStandardRequest_t *usbStandardRequestP, USBResponse_t *usbResponseP, USBTransfer_t *usbTransferP);
 
 
 #endif /* USBSTDDREQ_H_ */

@@ -23,10 +23,10 @@
 #define true 1
 #define false 0
 
-typedef void (*CALLBACK_FUNC)(void*);
-
 typedef _Bool	bool_t;
 typedef signed char sint8_t;
 typedef void* ptr_t;
+
+typedef void (*CALLBACK_FUNC)(ptr_t);
 
 #endif /* TYPEDEFS_H_ */

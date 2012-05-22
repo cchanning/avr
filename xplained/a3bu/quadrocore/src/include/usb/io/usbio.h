@@ -26,7 +26,7 @@
 typedef struct _USBTransfer
 {
 	USBEndpoint_t *usbEndpointP;
-	CALLBACK_FUNC *callbackFuncP;
+	CALLBACK_FUNC callbackFuncP;
 	void *callbackDataP;
 	
 } USBTransfer_t;
