@@ -28,109 +28,6 @@ void USBEndpointPipeFree(USBEndpointPipe_t *usbEndpointPipeP);
 bool_t USBEndpointInit(USBEndpoint_t *usbEndpointP);
 void USBEndpointTableFree(void);
 
-void USBEndpointResetAll(void)
-{
-	uint8_t endpointNumber = 0;
-	
-	for (endpointNumber = 0; endpointNumber < usbEndpointTableP->usbEndpointTableConfigurationP->endpointCount; endpointNumber++)
-	{
-		USBEndpointReset(USBEndpointGetByNumber(endpointNumber));
-	}
-}
-
-void USBEndpointReset(USBEndpoint_t *usbEndpointP)
-{
-	if (! usbEndpointP) return;
-	
-	USBEndpointPipeReset(usbEndpointP->usbEndpointOutPipeP, usbEndpointP->usbEndpointConfigurationP);
-	USBEndpointPipeReset(usbEndpointP->usbEndpointInPipeP, usbEndpointP->usbEndpointConfigurationP);
-}
-
-void USBEndpointPipeReset(USBEndpointPipe_t *usbEndpointPipeP, const USBEndpointConfiguration_t const *usbEndpointConfigurationP)
-{
-	if (! usbEndpointPipeP) return;
-	
-	usbEndpointPipeP->status = 0;
-	usbEndpointPipeP->ctrl = usbEndpointConfigurationP->type | usbEndpointConfigurationP->bufferType;
-	usbEndpointPipeP->cnt = 0;
-	usbEndpointPipeP->auxData = 0;
-	
-	if (usbEndpointPipeP->dataBufferP)
-	{
-		memset((void *)usbEndpointPipeP->dataBufferP, 0, usbEndpointConfigurationP->bufferSize);	
-	}
-}
-
-bool_t USBEndpointPipeInit(USBEndpointPipe_t *usbEndpointPipeP, const USBEndpointConfiguration_t const *usbEndpointConfigurationP)
-{
-	if (! usbEndpointPipeP)
-	{
-		return false;
-	}
-	
-	if (! (usbEndpointPipeP->dataBufferP = calloc(1, usbEndpointConfigurationP->bufferSize * sizeof(uint8_t))))
-	{
-		return false;
-	}
-	
-	USBEndpointPipeReset(usbEndpointPipeP, usbEndpointConfigurationP);
-	
-	return true;
-}
-
-bool_t USBEndpointInit(USBEndpoint_t *usbEndpointP)
-{
-	if (! usbEndpointP) return false;
-	
-	return (USBEndpointPipeInit(usbEndpointP->usbEndpointOutPipeP, usbEndpointP->usbEndpointConfigurationP) && USBEndpointPipeInit(usbEndpointP->usbEndpointInPipeP, usbEndpointP->usbEndpointConfigurationP));
-}
-
-void USBEndpointPipeFree(USBEndpointPipe_t *usbEndpointPipeP)
-{
-	if (! usbEndpointPipeP)
-	{
-		return;
-	}
-	
-	if (usbEndpointPipeP->dataBufferP)
-	{
-		free((void *)usbEndpointPipeP->dataBufferP);
-	}
-	
-	usbEndpointPipeP->status = 0;
-	usbEndpointPipeP->ctrl = 0;
-	usbEndpointPipeP->cnt = 0;
-	usbEndpointPipeP->auxData = 0;
-	usbEndpointPipeP->dataBufferP = NULL;
-}
-
-void USBEndpointFree(USBEndpoint_t *usbEndpointP)
-{
-	if (! usbEndpointP) return;
-	
-	USBEndpointPipeFree(usbEndpointP->usbEndpointOutPipeP);
-	USBEndpointPipeFree(usbEndpointP->usbEndpointInPipeP);
-}
-
-void USBEndpointTableFree(void)
-{
-	if (! usbEndpointTableP) return;
-	
-	{
-		uint8_t endpointNumber = 0;
-	
-		for (endpointNumber = 0; endpointNumber < usbEndpointTableP->usbEndpointTableConfigurationP->endpointCount; endpointNumber++)
-		{
-			USBEndpointFree(USBEndpointGetByNumber(endpointNumber));
-		}
-	
-		VectorFree(usbEndpointTableP->usbEndpointListP);
-		free(usbEndpointTableP->blockP);
-		free((void *)usbEndpointTableP);
-		usbEndpointTableP = NULL;	
-	}
-}
-
 bool_t USBEndpointTableInit(const USBEndpointTableConfiguration_t const *usbEndpointTableConfigurationP)
 {		
 	if (! usbEndpointTableConfigurationP) return false;
@@ -194,6 +91,114 @@ bool_t USBEndpointTableInit(const USBEndpointTableConfiguration_t const *usbEndp
 	return usbEndpointTableP;
 }
 
+void USBEndpointTableFree(void)
+{
+	if (! usbEndpointTableP) return;
+	
+	{
+		uint8_t endpointNumber = 0;
+		
+		for (endpointNumber = 0; endpointNumber < usbEndpointTableP->usbEndpointTableConfigurationP->endpointCount; endpointNumber++)
+		{
+			USBEndpointFree(USBEndpointGetByNumber(endpointNumber));
+		}
+		
+		VectorFree(usbEndpointTableP->usbEndpointListP);
+		free(usbEndpointTableP->blockP);
+		free((void *)usbEndpointTableP);
+		usbEndpointTableP = NULL;
+	}
+}
+
+uint16_t USBEndpointTableGetBaseAddress(void)
+{
+	return (uint16_t)(USBEndpointGetDefault()->usbEndpointOutPipeP);
+}
+
+void USBEndpointResetAll(void)
+{
+	uint8_t endpointNumber = 0;
+	
+	for (endpointNumber = 0; endpointNumber < usbEndpointTableP->usbEndpointTableConfigurationP->endpointCount; endpointNumber++)
+	{
+		USBEndpointReset(USBEndpointGetByNumber(endpointNumber));
+	}
+}
+
+void USBEndpointReset(USBEndpoint_t *usbEndpointP)
+{
+	if (! usbEndpointP) return;
+	
+	USBEndpointPipeReset(usbEndpointP->usbEndpointOutPipeP, usbEndpointP->usbEndpointConfigurationP);
+	USBEndpointPipeReset(usbEndpointP->usbEndpointInPipeP, usbEndpointP->usbEndpointConfigurationP);
+}
+
+bool_t USBEndpointInit(USBEndpoint_t *usbEndpointP)
+{
+	if (! usbEndpointP) return false;
+	
+	return (USBEndpointPipeInit(usbEndpointP->usbEndpointOutPipeP, usbEndpointP->usbEndpointConfigurationP) && USBEndpointPipeInit(usbEndpointP->usbEndpointInPipeP, usbEndpointP->usbEndpointConfigurationP));
+}
+
+void USBEndpointFree(USBEndpoint_t *usbEndpointP)
+{
+	if (! usbEndpointP) return;
+	
+	USBEndpointPipeFree(usbEndpointP->usbEndpointOutPipeP);
+	USBEndpointPipeFree(usbEndpointP->usbEndpointInPipeP);
+}
+
+void USBEndpointPipeReset(USBEndpointPipe_t *usbEndpointPipeP, const USBEndpointConfiguration_t const *usbEndpointConfigurationP)
+{
+	if (! usbEndpointPipeP) return;
+	
+	usbEndpointPipeP->status = 0;
+	usbEndpointPipeP->ctrl = usbEndpointConfigurationP->type | usbEndpointConfigurationP->bufferType;
+	usbEndpointPipeP->cnt = 0;
+	usbEndpointPipeP->auxData = 0;
+	
+	if (usbEndpointPipeP->dataBufferP)
+	{
+		memset((void *)usbEndpointPipeP->dataBufferP, 0, usbEndpointConfigurationP->bufferSize);	
+	}
+}
+
+bool_t USBEndpointPipeInit(USBEndpointPipe_t *usbEndpointPipeP, const USBEndpointConfiguration_t const *usbEndpointConfigurationP)
+{
+	if (! usbEndpointPipeP)
+	{
+		return false;
+	}
+	
+	if (! (usbEndpointPipeP->dataBufferP = calloc(1, usbEndpointConfigurationP->bufferSize * sizeof(uint8_t))))
+	{
+		return false;
+	}
+	
+	USBEndpointPipeReset(usbEndpointPipeP, usbEndpointConfigurationP);
+	
+	return true;
+}
+
+void USBEndpointPipeFree(USBEndpointPipe_t *usbEndpointPipeP)
+{
+	if (! usbEndpointPipeP)
+	{
+		return;
+	}
+	
+	if (usbEndpointPipeP->dataBufferP)
+	{
+		free((void *)usbEndpointPipeP->dataBufferP);
+	}
+	
+	usbEndpointPipeP->status = 0;
+	usbEndpointPipeP->ctrl = 0;
+	usbEndpointPipeP->cnt = 0;
+	usbEndpointPipeP->auxData = 0;
+	usbEndpointPipeP->dataBufferP = NULL;
+}
+
 USBEndpoint_t* USBEndpointGetByPipe(USBEndpointPipe_t *usbEndpointPipeP)
 {
 	uint8_t endpointNumber = 0;
@@ -229,9 +234,4 @@ USBEndpoint_t* USBEndpointTxQueueGetNext(void)
 	}
 	
 	return (USBEndpoint_t *)((USBEndpointTableGetBaseAddress() + 2) * fifoRP);
-}
-
-uint16_t USBEndpointTableGetBaseAddress(void)
-{
-	return (uint16_t)(USBEndpointGetDefault()->usbEndpointOutPipeP);
 }
