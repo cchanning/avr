@@ -27,6 +27,7 @@ bool_t USBEndpointPipeInit(USBEndpointPipe_t *usbEndpointPipeP, const USBEndpoin
 void USBEndpointPipeFree(USBEndpointPipe_t *usbEndpointPipeP);
 bool_t USBEndpointInit(USBEndpoint_t *usbEndpointP);
 void USBEndpointTableFree(void);
+void USBEndpointFree(USBEndpoint_t *usbEndpointP);
 
 bool_t USBEndpointTableInit(const USBEndpointTableConfiguration_t const *usbEndpointTableConfigurationP)
 {		
