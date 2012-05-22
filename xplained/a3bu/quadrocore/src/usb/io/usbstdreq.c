@@ -106,7 +106,7 @@ void USBProcessStandardRequest(USBTransfer_t *usbTransferP)
 			}
 			
 			(*usbStandardRequestHandlerP->handlerFuncP)(usbStandardRequestP, usbResponseP, usbTransferP);
-			USBEndpointTransmit(usbTransferP->usbEndpointP, usbResponseP->byteCount);
+			USBEndpointTransmit(usbTransferP->usbEndpointP, usbResponseP->requestedByteCount, usbResponseP->byteCount);
 			free(usbResponseP);
 		}
 	}

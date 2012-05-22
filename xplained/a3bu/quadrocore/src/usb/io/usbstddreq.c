@@ -32,7 +32,7 @@ void USBDeviceGetDescriptor(USBStandardRequest_t *usbStandardRequestP, USBRespon
 {
 	USBStandardDeviceDescriptor_t *usbStandardDeviceDescriptorP = (USBStandardDeviceDescriptor_t *)usbTransferP->usbEndpointP->usbEndpointInPipeP->dataBufferP;
 	
-	usbStandardDeviceDescriptorP->length = sizeof(USBStandardDeviceDescriptor_t);
+	usbStandardDeviceDescriptorP->length = ((USBStandardDeviceRequest_t*)usbStandardRequestP)->length;
 	usbStandardDeviceDescriptorP->descriptorType = DEVICE;
 	usbStandardDeviceDescriptorP->deviceClass = 0x00;
 	usbStandardDeviceDescriptorP->deviceSubClass = 0x00;
@@ -47,7 +47,8 @@ void USBDeviceGetDescriptor(USBStandardRequest_t *usbStandardRequestP, USBRespon
 	usbStandardDeviceDescriptorP->numberOfConfigurations = 0x01;
 	usbStandardDeviceDescriptorP->usbVersion = 0x0200;
 	
-	usbResponseP->byteCount = usbStandardDeviceDescriptorP->length;
+	usbResponseP->requestedByteCount = usbStandardDeviceDescriptorP->length;
+	usbResponseP->byteCount = sizeof(USBStandardDeviceDescriptor_t);
 }
 
 void USBDeviceSetDeferredAddress(USBStandardRequest_t *usbStandardRequestP, USBResponse_t *usbResponseP, USBTransfer_t *usbTransferP)

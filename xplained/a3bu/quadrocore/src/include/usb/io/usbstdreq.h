@@ -42,10 +42,9 @@
 
 typedef struct _USBResponse
 {
+	uint16_t requestedByteCount;
 	uint16_t byteCount;
 } USBResponse_t;
-
-void USBProcessStandardRequest(USBTransfer_t *usbTransferP);
 
 enum DescriptorType
 {
@@ -67,5 +66,7 @@ typedef struct _USBStandardRequestHandler
 	uint8_t id;
 	USB_STANDARD_REQUEST_HANDLER_FUNC handlerFuncP;
 } USBStandardRequestHandler_t;
+
+void USBProcessStandardRequest(USBTransfer_t *usbTransferP);
 
 #endif /* USBSTDREQ_H_ */
