@@ -85,6 +85,8 @@ ISR(USB_TRNCOMPL_vect)
 		if (USB.INTFLAGSBSET & USB_SETUPIF_bm)
 		{
 			USBProcessStandardRequest(usbTransferP);
+			usbTransferP->usbEndpointP->usbEndpointOutPipeP->status &= ~(USB_EP_SETUP_bm | USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm);
+			usbTransferP->usbEndpointP->usbEndpointInPipeP->status &= ~(USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm);
 			USB.INTFLAGSBCLR = USB_SETUPIF_bm;	
 		}
 		
@@ -98,9 +100,8 @@ ISR(USB_TRNCOMPL_vect)
 				usbTransferP->callbackDataP = NULL;
 			}
 			
-			usbTransferP->usbEndpointP->usbEndpointInPipeP->status &= ~(1 << 1);
-			usbTransferP->usbEndpointP->usbEndpointOutPipeP->status &= ~(1 << 1);
-			
+			usbTransferP->usbEndpointP->usbEndpointOutPipeP->status &= ~(USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm);
+			usbTransferP->usbEndpointP->usbEndpointInPipeP->status &= ~(USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm);
 			USB.INTFLAGSBCLR = USB_TRNIF_bm;
 		}
 	}	

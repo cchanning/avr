@@ -68,8 +68,6 @@ void USBEndpointTransmit(USBEndpoint_t *usbEndpointP, size_t requestedByteCount,
 	
 	usbEndpointInPipeP->auxData = 0;
 	usbEndpointInPipeP->cnt = USB_EP_ZLP_bm | requestedByteCount;
-	usbEndpointInPipeP->status &= ~(1 << 1);
-	usbEndpointOutPipeP->status &= ~(1 << 1);
 }
 
 USBTransfer_t* USBGetTransfer(USBEndpoint_t *usbEndpointP)
