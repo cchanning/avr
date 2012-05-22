@@ -31,12 +31,12 @@
  *	uint8_t *rowP = VectorGetDeferencedRow(vectorP, 0, uint8_t*)
  *		
  */
-#define VectorGetDeferencedRow(vectorP, index, type) ( (type)*((uint16_t*)(vectorP->rowP + (index * vectorP->rowSize))) )
+#define VectorGetDeferencedRow(vectorP, index, type) ( ((index > -1) && (index < vectorP->rowCount) ? (type)*((uint16_t*)(vectorP->rowP + (index * vectorP->rowSize))) : NULL) )
 
 /**
  *	These macros should be used when storing blocks of memory in a vector. 	
  */
-#define VectorGetRow(vectorP, index, type) ( (type)(vectorP->rowP + (index * vectorP->rowSize) )
+#define VectorGetRow(vectorP, index, type) ( ((index > -1) && (index < vectorP->rowCount) ? (type)(vectorP->rowP + (index * vectorP->rowSize)) : NULL) )
 
 typedef struct _Vector
 {
@@ -115,5 +115,12 @@ uint16_t VectorSize(Vector_t *vectorP);
  * @param vectorP a pointer to the vector
  */
 void VectorClear(Vector_t *vectorP);
+
+/**
+ * Frees the vector
+ *
+ * @param vectorP a pointer to the vector
+ */
+void VectorFree(Vector_t *vectorP);
 
 #endif /* VECTOR_H_ */

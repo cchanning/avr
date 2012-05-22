@@ -82,13 +82,13 @@ USBStandardRequestHandler_t* USBStandardRequestResolveHandler(USBStandardRequest
 
 void USBProcessStandardRequest(USBTransfer_t *usbTransferP)
 {			
-	if (! usbTransferP->usbEndpointOutP->cnt)
+	if (! usbTransferP->usbEndpointP->usbEndpointOutPipeP->cnt)
 	{
 		return;
 	}
 	
 	{
-		USBStandardRequest_t *usbStandardRequestP = (USBStandardRequest_t *)usbTransferP->usbEndpointOutP->dataBufferP;
+		USBStandardRequest_t *usbStandardRequestP = (USBStandardRequest_t *)usbTransferP->usbEndpointP->usbEndpointOutPipeP->dataBufferP;
 		USBStandardRequestHandler_t *usbStandardRequestHandlerP = USBStandardRequestResolveHandler(usbStandardRequestP);
 		
 		if (! usbStandardRequestHandlerP)
@@ -106,7 +106,7 @@ void USBProcessStandardRequest(USBTransfer_t *usbTransferP)
 			}
 			
 			(*usbStandardRequestHandlerP->handlerFuncP)(usbStandardRequestP, usbResponseP, usbTransferP);
-			USBEndpointTransmit(usbTransferP->usbEndpointInP, usbResponseP->byteCount);
+			USBEndpointTransmit(usbTransferP->usbEndpointP, usbResponseP->byteCount);
 			free(usbResponseP);
 		}
 	}

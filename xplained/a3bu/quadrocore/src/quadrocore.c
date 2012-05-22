@@ -25,55 +25,23 @@ int main(void)
 	{
 		.usbEndpointTableConfiguration = 
 		{
-			.endpointCount = 1,
+			.endpointCount = 4,
 			.maxPacketSize = 32,
 			.endpointConfiguration[0] = 
 			{
 				.type = USB_EP_TYPE_CONTROL_gc,
 				.bufferSize = 32,
-				.bufferType = USB_EP_BUFSIZE_32_gc
+				.bufferType = USB_EP_BUFSIZE_32_gc,
+				.maxPacketSize = 32
 			}
-		}
+		}			
 	};
-	
-	//vector to hold pointers
-	uint8_t v1 = 1;
-	uint8_t *vP1 = &v1;
-	uint8_t v2 = 2;
-	uint8_t *vP2 = &v2;
-	
-	Vector_t *vectorP = VectorAlloc(1, sizeof(ptr_t));
-	
-	//note we use the address of the pointer as memcpy will deference the pointer and copy the bytes, so we need a pointer to a pointer so when it's dereferenced the address is copied into the vector space
-	VectorAddRow(vectorP, &vP1);
-	VectorAddRow(vectorP, &vP2);
-	VectorAddRow(vectorP, &vP1);
-	VectorAddRow(vectorP, &vP2);
-	VectorAddRow(vectorP, &vP1);
-	VectorAddRow(vectorP, &vP2);
-
-	VectorRemoveRow(vectorP, 5);
-	VectorRemoveRow(vectorP, 0);
-	VectorRemoveRow(vectorP, 0);
-	VectorRemoveRow(vectorP, 0);
-	VectorRemoveRow(vectorP, 0);
-	VectorRemoveRow(vectorP, 0);
-	VectorRemoveRow(vectorP, 0);
-	
-	Vector_t *vector2P = VectorAlloc(1, sizeof(USBTransfer_t));
-	USBTransfer_t *usbTransfer1P = VectorCreateRow(vector2P);
-	usbTransfer1P->transactionCount = 2;
-	USBTransfer_t *usbTransfer2P = VectorCreateRow(vector2P);
-	usbTransfer2P->transactionCount = 4;	
-	
-	VectorRemoveRow(vector2P, 1);
-	VectorRemoveRow(vector2P, 0);
 	
 	DisableGlobalInterrupts();
 	{
 		SystemClockInit();
 		PMICInit(PMIC_HILVLEN_bm);
-		USBModuleInit(&usbConfiguration);
+		USBModuleInit(&usbConfiguration);		
 	}
 	EnableGlobalInterrupts();
 	

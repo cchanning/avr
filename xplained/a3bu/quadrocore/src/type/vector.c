@@ -168,3 +168,11 @@ void VectorClear(Vector_t *vectorP)
 		vectorP->rowCount = 0;
 	}
 }
+
+void VectorFree(Vector_t *vectorP)
+{
+	if (! vectorP) return;
+	
+	free(vectorP->rowP);
+	free(vectorP);
+}

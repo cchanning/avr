@@ -20,7 +20,7 @@
 #ifndef USBEP_H_
 #define USBEP_H_
 
-typedef struct _USBEndpoint
+typedef struct _USBEndpointPipe
 {
 	volatile uint8_t status;
 	volatile uint8_t ctrl;
@@ -28,14 +28,23 @@ typedef struct _USBEndpoint
 	volatile void *dataBufferP;
 	volatile uint16_t auxData;
 	
-} USBEndpoint_t;
+} USBEndpointPipe_t;
 
 typedef struct _USBEndpointConfiguration
 {
 	uint8_t type;
 	uint8_t bufferSize;
 	uint8_t bufferType;
+	uint8_t maxPacketSize;
 } USBEndpointConfiguration_t;
+
+typedef struct _USBEndpoint
+{
+	uint8_t endpointNumber;
+	const USBEndpointConfiguration_t *usbEndpointConfigurationP;
+	USBEndpointPipe_t *usbEndpointOutPipeP;
+	USBEndpointPipe_t *usbEndpointInPipeP;
+} USBEndpoint_t;
 
 typedef struct _USBEndpointTableConfiguration
 {
@@ -47,41 +56,36 @@ typedef struct _USBEndpointTableConfiguration
 typedef struct _USBEndpointTable
 {
 	/*
-		pointer to block of memory used for FIFO and the endpoint table. This should never be used directly
+		pointer to block of memory used for FIFO and the endpoint table (which are really pipes). This should never be used directly
 		except to free it.
 	 */
-	void *baseP;
+	void *blockP;
 	
 	/*
-		pointer to the block of memory used as the endpoint FIFO. Note that it will never to be used in code,
-		it just serves as a reminder that the USB module expects this memory to be allocated.  
-	 */ 
-	void *fifoP;
-	
-	/* 
-		pointer to the endpoint table memory used to hold the USB endpoint configuration etc.
+		pointer to the vector holding each endpoint
 	 */
-	USBEndpoint_t *usbEndpointP;
+	Vector_t *usbEndpointListP;
 	
 	const USBEndpointTableConfiguration_t const *usbEndpointTableConfigurationP;
 
 } USBEndpointTable_t;
 
-typedef enum _EndpointDirection
+typedef enum _EndpointPipeDirection
 {
 	OUT,
 	IN
-} EndpointDirection;
+} EndpointPipeDirection;
 
 
-bool_t USBEndpointTableAlloc(const USBEndpointTableConfiguration_t const *usbEndpointTableConfigurationP);
+bool_t USBEndpointTableInit(const USBEndpointTableConfiguration_t const *usbEndpointTableConfigurationP);
+uint16_t USBEndpointTableGetBaseAddress(void);
 
-USBEndpointTable_t* USBEndpointTableGet(void);
-USBEndpoint_t* USBEndpointGet(uint8_t endpointNumber, EndpointDirection endpointDirection);
-USBEndpoint_t* USBEndpointGetDefault(EndpointDirection endpointDirection);
+USBEndpoint_t* USBEndpointGetByPipe(USBEndpointPipe_t *usbEndpointPipeP);
+USBEndpoint_t* USBEndpointGetByNumber(uint8_t endpointNumber);
+USBEndpoint_t* USBEndpointGetDefault(void);
 USBEndpoint_t* USBEndpointTxQueueGetNext(void);
 
-void USBEndpointReset(USBEndpoint_t *usbEndpointP, const USBEndpointConfiguration_t const *usbEndpointConfigurationP);
+void USBEndpointReset(USBEndpoint_t *usbEndpointP);
 void USBEndpointResetAll(void);
 
 #endif /* USBEP_H_ */

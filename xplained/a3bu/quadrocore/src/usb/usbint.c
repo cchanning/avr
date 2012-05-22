@@ -75,8 +75,7 @@ ISR(USB_TRNCOMPL_vect)
 		{
 			//we'll need to look this up from the transfer table
 			USBTransfer_t usbTransfer;
-			usbTransfer.usbEndpointInP = USBEndpointGetDefault(IN);
-			usbTransfer.usbEndpointOutP = USBEndpointGetDefault(OUT);
+			usbTransfer.usbEndpointP = USBEndpointGetDefault();
 			USBProcessStandardRequest(&usbTransfer);
 			USB.INTFLAGSBCLR = USB_SETUPIF_bm;	
 		}

@@ -21,13 +21,13 @@
 
 bool_t USBModuleInit(const USBConfiguration_t *usbConfigurationP)
 {
-	if (! USBEndpointTableAlloc(&usbConfigurationP->usbEndpointTableConfiguration))
+	if (! USBEndpointTableInit(&usbConfigurationP->usbEndpointTableConfiguration))
 	{
 		return false;	
 	}
 		
 	//set the USB module EPPTR register (so it will know where the endpoint table configuration lives)
-	USB.EPPTR = ((uint16_t)USBEndpointTableGet()->usbEndpointP);
+	USB.EPPTR = USBEndpointTableGetBaseAddress();
 	
 	//load the USB calibration data from the device production row into the USB calibration registers
 	NVM.CMD = NVM_CMD_READ_CALIB_ROW_gc; 
