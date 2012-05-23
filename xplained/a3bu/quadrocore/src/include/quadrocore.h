@@ -29,6 +29,7 @@
 #include <avr/common.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
+#include <util/atomic.h>
 
 #include "clock/clock.h"
 #include "ccp/ccp.h"

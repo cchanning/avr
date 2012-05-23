@@ -34,6 +34,11 @@ typedef struct _USBTransfer
 bool_t USBTransferTableInit(USBEndpointTableConfiguration_t *usbEndpointTableConfigurationP);
 USBTransfer_t* USBGetTransfer(USBEndpoint_t *usbEndpointP);
 
+bool_t USBEndpointHasOutputData(USBEndpoint_t *usbEndpointP);
+void USBEndpointResetOutputBuffer(USBEndpoint_t *usbEndpointP);
+void USBEndpointResetStatus(USBEndpoint_t *usbEndpointP);
 void USBEndpointTransmit(USBEndpoint_t *usbEndpointP, size_t requestedByteCount, size_t byteCount);
+bool_t USBEndpointIsWritable(USBEndpoint_t *usbEndpointP);
+bool_t USBEndpointIsReadable(USBEndpoint_t *usbEndpointP);
 
 #endif /* USBIO_H_ */

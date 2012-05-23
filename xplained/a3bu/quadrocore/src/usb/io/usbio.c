@@ -55,6 +55,36 @@ bool_t USBTransferTableInit(USBEndpointTableConfiguration_t *usbEndpointTableCon
 	return true;
 }
 
+bool_t USBEndpointHasOutputData(USBEndpoint_t *usbEndpointP)
+{
+	if (! usbEndpointP)
+	{
+		return false;
+	}
+	
+	return usbEndpointP->usbEndpointOutPipeP->cnt > 0;
+}
+
+void USBEndpointResetOutputBuffer(USBEndpoint_t *usbEndpointP)
+{
+	if (! usbEndpointP)
+	{
+		return;
+	}
+	
+	usbEndpointP->usbEndpointOutPipeP->cnt = 0;
+}
+void USBEndpointResetStatus(USBEndpoint_t *usbEndpointP)
+{
+	if (! usbEndpointP)
+	{
+		return;
+	}
+	
+	usbEndpointP->usbEndpointOutPipeP->status &= ~(USB_EP_SETUP_bm | USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm | USB_EP_STALLF_bm);
+	usbEndpointP->usbEndpointInPipeP->status &= ~(USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm | USB_EP_STALLF_bm);	
+}
+
 void USBEndpointTransmit(USBEndpoint_t *usbEndpointP, size_t requestedByteCount, size_t byteCount)
 {
 	USBEndpointPipe_t *usbEndpointOutPipeP = usbEndpointP->usbEndpointOutPipeP;
@@ -68,6 +98,27 @@ void USBEndpointTransmit(USBEndpoint_t *usbEndpointP, size_t requestedByteCount,
 	
 	usbEndpointInPipeP->auxData = 0;
 	usbEndpointInPipeP->cnt = USB_EP_ZLP_bm | requestedByteCount;
+	USBEndpointResetStatus(usbEndpointP);
+}
+
+bool_t USBEndpointIsWritable(USBEndpoint_t *usbEndpointP)
+{
+	if (! usbEndpointP)
+	{
+		return false;
+	}
+	
+	return (USB_EP_BUSNACK0_bm == (usbEndpointP->usbEndpointInPipeP->status & USB_EP_BUSNACK0_bm));
+}
+
+bool_t USBEndpointIsReadable(USBEndpoint_t *usbEndpointP)
+{
+	if (! usbEndpointP)
+	{
+		return false;
+	}
+	
+	return (USB_EP_BUSNACK0_bm == (usbEndpointP->usbEndpointOutPipeP->status & USB_EP_BUSNACK0_bm));
 }
 
 USBTransfer_t* USBGetTransfer(USBEndpoint_t *usbEndpointP)

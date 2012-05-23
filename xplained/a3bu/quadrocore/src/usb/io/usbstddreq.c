@@ -53,7 +53,8 @@ void USBDeviceGetDescriptor(USBStandardRequest_t *usbStandardRequestP, USBRespon
 
 void USBDeviceSetDeferredAddress(USBStandardRequest_t *usbStandardRequestP, USBResponse_t *usbResponseP, USBTransfer_t *usbTransferP)
 {
-	uint8_t address = ((USBStandardDeviceRequest_t*)usbStandardRequestP)->value;
+	//a usb address is only 7 bits long, guarantee we don't get any other garbage in the 16bit request value
+	uint8_t address = ((USBStandardDeviceRequest_t*)usbStandardRequestP)->value & 0x7F;
 	
 	if (! (usbTransferP->callbackDataP = calloc(1, sizeof(uint8_t))))
 	{
@@ -63,6 +64,7 @@ void USBDeviceSetDeferredAddress(USBStandardRequest_t *usbStandardRequestP, USBR
 	*((uint8_t*)usbTransferP->callbackDataP) = address;
 	usbTransferP->callbackFuncP = &USBDeviceSetAddressCallback;
 	
+	usbResponseP->requestedByteCount = 0;
 	usbResponseP->byteCount = 0;
 }
 

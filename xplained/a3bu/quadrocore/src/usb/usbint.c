@@ -70,7 +70,7 @@ ISR(USB_BUSEVENT_vect)
 }
 
 ISR(USB_TRNCOMPL_vect)
-{	
+{
 	DisableGlobalInterrupts();
 	{	
 		//temp until we setup the transfer table
@@ -84,25 +84,31 @@ ISR(USB_TRNCOMPL_vect)
 		
 		if (USB.INTFLAGSBSET & USB_SETUPIF_bm)
 		{
+			USB.INTFLAGSBCLR = USB_SETUPIF_bm;
 			USBProcessStandardRequest(usbTransferP);
-			usbTransferP->usbEndpointP->usbEndpointOutPipeP->status &= ~(USB_EP_SETUP_bm | USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm);
-			usbTransferP->usbEndpointP->usbEndpointInPipeP->status &= ~(USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm);
-			USB.INTFLAGSBCLR = USB_SETUPIF_bm;	
+			USBEndpointResetOutputBuffer(usbTransferP->usbEndpointP);	
 		}
 		
 		if (USB.INTFLAGSBSET & USB_TRNIF_bm)
 		{
-			if (usbTransferP->callbackFuncP)
+			USB.INTFLAGSBCLR = USB_TRNIF_bm;
+			
+			//this is an IN token
+			if (! USBEndpointHasOutputData(usbTransferP->usbEndpointP))
 			{
-				(*usbTransferP->callbackFuncP)(usbTransferP->callbackDataP);
-				free(usbTransferP->callbackDataP);
-				usbTransferP->callbackFuncP = NULL;
-				usbTransferP->callbackDataP = NULL;
+				if (usbTransferP->callbackFuncP)
+				{
+					(*usbTransferP->callbackFuncP)(usbTransferP->callbackDataP);
+					free(usbTransferP->callbackDataP);
+					usbTransferP->callbackFuncP = NULL;
+					usbTransferP->callbackDataP = NULL;
+				}	
+			}
+			else
+			{
+				USBEndpointResetOutputBuffer(usbTransferP->usbEndpointP);
 			}
 			
-			usbTransferP->usbEndpointP->usbEndpointOutPipeP->status &= ~(USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm);
-			usbTransferP->usbEndpointP->usbEndpointInPipeP->status &= ~(USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm);
-			USB.INTFLAGSBCLR = USB_TRNIF_bm;
 		}
 	}	
 	EnableGlobalInterrupts();	
