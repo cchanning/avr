@@ -23,8 +23,23 @@
 #include "type/type.h"
 #include "usb/io/usbep.h"
 
+typedef enum _USBTransferDirection
+{
+	USB_TRANSFER_DIRECTION_IN = 0,
+	USB_TRANSFER_DIRECTION_OUT = 1
+} USBTransferDirection_t;
+
+typedef enum _USBTransferStage
+{
+	USB_TRANSFER_STAGE_SETUP = 0,
+	USB_TRANSFER_STAGE_DATA = 1,
+	USB_TRANSFER_STAGE_STATUS = 2
+} USBTransferStage_t;
+
 typedef struct _USBTransfer
 {
+	USBTransferDirection_t usbTransferDirection;
+	USBTransferStage_t usbTransferStage;
 	USBEndpoint_t *usbEndpointP;
 	CALLBACK_FUNC callbackFuncP;
 	void *callbackDataP;
