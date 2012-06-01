@@ -21,59 +21,23 @@
 
 static Vector_t *usbTransferTableP = NULL;
 
-bool_t USBTransferInitialized(USBTransfer_t *usbTransferP)
+bool_t USBTransferTableInit(uint16_t usbControlTransferBufferSize, uint8_t endpointCount)
 {
-	return (usbTransferP) && (usbTransferP->usbEndpointP);
-}
-
-void USBTransferInit(USBTransfer_t *usbTransferP, uint8_t endpointNumber)
-{
-	if (! usbTransferP) return;
-	
-	usbTransferP->usbEndpointP = USBEndpointGetByNumber(endpointNumber);
-	usbTransferP->callbackDataP = NULL;
-	usbTransferP->callbackFuncP = NULL;
-}
-
-bool_t USBTransferTableInit(USBEndpointTableConfiguration_t *usbEndpointTableConfigurationP)
-{
-	if (! usbEndpointTableConfigurationP) return false;
-	
 	if (usbTransferTableP) return true;
 	
-	if (! (usbTransferTableP = VectorAlloc(1, sizeof(USBTransfer_t)))) return false;
+	if (! (usbTransferTableP = VectorAlloc(1, sizeof(USBControlTransfer_t)))) return false;
 	
+	for (uint8_t endpointNumber = 0; endpointNumber < endpointCount; endpointNumber++)
 	{
-		uint8_t endpoint = 0;
-		
-		for (endpoint = 0; endpoint < usbEndpointTableConfigurationP->endpointCount; endpoint++)
-		{
-			VectorCreateRow(usbTransferTableP);
-		}
+		USBControlTransfer_t *usbControlTransferP = (USBControlTransfer_t *)VectorCreateRow(usbTransferTableP);
+		usbControlTransferP->usbRequestP = calloc(1, usbControlTransferBufferSize);
+		usbControlTransferP->usbDataBufferInP = calloc(1, usbControlTransferBufferSize);
+		usbControlTransferP->usbDataBufferOutP = calloc(1, usbControlTransferBufferSize);
 	}
 	
 	return true;
 }
 
-bool_t USBEndpointHasOutputData(USBEndpoint_t *usbEndpointP)
-{
-	if (! usbEndpointP)
-	{
-		return false;
-	}
-	
-	return usbEndpointP->usbEndpointOutPipeP->cnt > 0;
-}
-
-void USBEndpointResetOutputBuffer(USBEndpoint_t *usbEndpointP)
-{
-	if (! usbEndpointP)
-	{
-		return;
-	}
-	
-	usbEndpointP->usbEndpointOutPipeP->cnt = 0;
-}
 void USBEndpointResetStatus(USBEndpoint_t *usbEndpointP)
 {
 	if (! usbEndpointP)
@@ -82,64 +46,207 @@ void USBEndpointResetStatus(USBEndpoint_t *usbEndpointP)
 	}
 	
 	usbEndpointP->usbEndpointOutPipeP->status &= ~(USB_EP_SETUP_bm | USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm | USB_EP_STALLF_bm);
-	usbEndpointP->usbEndpointInPipeP->status &= ~(USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm | USB_EP_STALLF_bm);	
+	usbEndpointP->usbEndpointInPipeP->status &= ~(USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm | USB_EP_STALLF_bm);
 }
 
-void USBEndpointTransmit(USBEndpoint_t *usbEndpointP, size_t requestedByteCount, size_t byteCount)
+void USBControlTransferReportStatus(USBControlTransfer_t *usbControlTransferP)
 {
-	USBEndpointPipe_t *usbEndpointOutPipeP = usbEndpointP->usbEndpointOutPipeP;
-	USBEndpointPipe_t *usbEndpointInPipeP = usbEndpointP->usbEndpointInPipeP;
+	usbControlTransferP->usbTransferStage = USB_TRANSFER_STAGE_AKNOWLEDGED;
 	
-	//we need to pad out the response with zeros to avoid garbage getting in to the message
-	if (byteCount < requestedByteCount)
+	/**
+		When the direction is OUT then the host will be expecting a ZLP packet to be sent back when it sends an IN token. When the direction is IN, 
+		the host will just expect an ACK packet which will be sent by the USB module as once the status of the out endpoint pipe is cleared an OUT
+		token will be handled automatically.
+		*/
+			
+	if (usbControlTransferP->usbTransferDirection == USB_TRANSFER_DIRECTION_OUT)
 	{
-		memset((ptr_t)(usbEndpointInPipeP->dataBufferP + byteCount), 0, requestedByteCount - byteCount - 1);
+		usbControlTransferP->usbEndpointP->usbEndpointInPipeP->auxData = 0;
+		usbControlTransferP->usbEndpointP->usbEndpointInPipeP->cnt = USB_EP_ZLP_bm | 0;				
 	}
 	
-	usbEndpointInPipeP->auxData = 0;
-	usbEndpointInPipeP->cnt = USB_EP_ZLP_bm | requestedByteCount;
-	USBEndpointResetStatus(usbEndpointP);
+	USBEndpointResetStatus(usbControlTransferP->usbEndpointP);
 }
 
-bool_t USBEndpointIsWritable(USBEndpoint_t *usbEndpointP)
+USBControlTransfer_t* USBGetControlTransfer(USBEndpoint_t *usbEndpointP)
 {
-	if (! usbEndpointP)
+	USBControlTransfer_t *usbControlTransferP = NULL;
+	uint8_t endpointNumber = usbEndpointP->endpointNumber;
+	
+	if (! (usbControlTransferP = VectorGetRow(usbTransferTableP, endpointNumber, USBControlTransfer_t*)))
+	{
+		return NULL;
+	}
+	
+	return usbControlTransferP;	
+}
+
+void USBResetControlTransfer(USBControlTransfer_t *usbControlTransferP)
+{
+	/**
+		Zero out all of the various buffers for the control transfer
+	 */
+	memset(usbControlTransferP->usbRequestP, 0, usbControlTransferP->usbEndpointP->usbEndpointConfigurationP->bufferSize);
+	memset(usbControlTransferP->usbDataBufferOutP, 0, usbControlTransferP->usbEndpointP->usbEndpointConfigurationP->bufferSize);
+	memset(usbControlTransferP->usbDataBufferInP, 0, usbControlTransferP->usbEndpointP->usbEndpointConfigurationP->bufferSize);
+	
+	usbControlTransferP->completionStageDataP = NULL;
+	usbControlTransferP->completionStageFuncP = NULL;
+	usbControlTransferP->requestedLength = 0;
+	usbControlTransferP->transmittedLength = 0;
+	usbControlTransferP->actualLength = 0;
+	usbControlTransferP->usbEndpointP = NULL;
+	usbControlTransferP->usbTransferDirection = 0;
+	usbControlTransferP->usbTransferStage = 0;
+	usbControlTransferP->usbTransferType = 0;
+}
+
+bool_t USBControlTransferStarted(USBEndpoint_t *usbEndpointP)
+{	
+	USBControlTransfer_t *usbTransferP = USBGetControlTransfer(usbEndpointP);
+		
+	if ((! usbEndpointP) || (! usbTransferP->usbEndpointP))
 	{
 		return false;
 	}
 	
-	return (USB_EP_BUSNACK0_bm == (usbEndpointP->usbEndpointInPipeP->status & USB_EP_BUSNACK0_bm));
+	return true;
 }
 
-bool_t USBEndpointIsReadable(USBEndpoint_t *usbEndpointP)
+USBControlTransfer_t* USBBeginControlTransfer(USBEndpoint_t *usbEndpointP)
 {
-	if (! usbEndpointP)
+	USBControlTransfer_t *usbTransferP = USBGetControlTransfer(usbEndpointP);
+	
+	if (! usbTransferP)
 	{
-		return false;
+		return NULL;
 	}
 	
-	return (USB_EP_BUSNACK0_bm == (usbEndpointP->usbEndpointOutPipeP->status & USB_EP_BUSNACK0_bm));
+	USBResetControlTransfer(usbTransferP);
+	usbTransferP->usbEndpointP = usbEndpointP;
+	usbTransferP->usbTransferStage = USB_TRANSFER_STAGE_INITIAL;
+	memcpy((ptr_t)usbTransferP->usbRequestP, (ptr_t)usbTransferP->usbEndpointP->usbEndpointOutPipeP->dataBufferP, usbTransferP->usbEndpointP->usbEndpointConfigurationP->bufferSize);
+	USBParseStandardRequestMetaData(usbTransferP);
+		
+	return usbTransferP;	
 }
 
-USBTransfer_t* USBGetTransfer(USBEndpoint_t *usbEndpointP)
+void USBEndControlTransfer(USBEndpoint_t *usbEndpointP)
 {
-	USBTransfer_t *usbTransferP = NULL;
+	USBControlTransfer_t *usbTransferP = USBGetControlTransfer(usbEndpointP);
 	
-	if (! usbEndpointP) return NULL;
-	
-	{		
-		uint8_t endpointNumber = usbEndpointP->endpointNumber;
-		
-		if (! (usbTransferP = VectorGetRow(usbTransferTableP, endpointNumber, USBTransfer_t*)))
-		{
-			return NULL;
-		}
-		
-		if (! USBTransferInitialized(usbTransferP))
-		{
-			USBTransferInit(usbTransferP, endpointNumber);
-		}
+	if (! usbTransferP)
+	{
+		return;
 	}
 	
-	return usbTransferP;
+	USBResetControlTransfer(usbTransferP);
+}
+
+void USBProcessControlTransfer(USBEndpoint_t *usbEndpointP)
+{
+	USBControlTransfer_t *usbControlTransferP = (! USBControlTransferStarted(usbEndpointP) ? USBBeginControlTransfer(usbEndpointP) : USBGetControlTransfer(usbEndpointP));
+	
+	/**
+		The host has acknowledged our status response, so lets make sure we finish any outstanding work.
+	 */
+	if (usbControlTransferP->usbTransferStage == USB_TRANSFER_STAGE_AKNOWLEDGED)
+	{
+		if (usbControlTransferP->completionStageFuncP)
+		{
+			(*usbControlTransferP->completionStageFuncP)(usbControlTransferP->completionStageDataP);
+			free(usbControlTransferP->completionStageDataP);
+		}
+		
+		USBEndControlTransfer(usbEndpointP);
+		
+		return;
+	}
+	
+	/**
+		Data needs to be moved between the host and the device (data stage), work out which way and buffer the data until we have it all if required.
+	 */
+	if (usbControlTransferP->requestedLength > 0)
+	{
+		usbControlTransferP->usbTransferStage = USB_TRANSFER_STAGE_DATA;
+		
+		/**
+			The host wants to send us some data, make sure we have it all before delegating to the request handler for processing. Each request handler requiring data from the host
+			expects the complete picture before it will process the request.
+		 */
+		if (usbControlTransferP->usbTransferDirection == USB_TRANSFER_DIRECTION_OUT)
+		{
+			usbControlTransferP->transmittedLength += usbControlTransferP->usbEndpointP->usbEndpointOutPipeP->cnt;
+			
+			/**
+				We have all of the data we need from the host, so process the request
+			 */
+			if (usbControlTransferP->transmittedLength >= usbControlTransferP->actualLength)
+			{
+				USBProcessStandardRequest(usbControlTransferP);
+				USBControlTransferReportStatus(usbControlTransferP);
+			}
+			else
+			{
+				/**
+					We don't have all of the data yet, so clear the endpoint status to allow the host to keep sending us OUT tokens.
+				 */
+				USBEndpointResetStatus(usbControlTransferP->usbEndpointP);
+			}
+		}
+		
+		/**
+			The host wants us to send it data, process the request in order to have it dumped into the internal control transfer IN buffer and then split the buffer into multiple IN
+			tokens.
+		 */
+		if (usbControlTransferP->usbTransferDirection == USB_TRANSFER_DIRECTION_IN)
+		{
+			bool_t transmitRequired = true;
+			
+			if (usbControlTransferP->usbEndpointP->usbEndpointInPipeP->cnt == 0)
+			{
+				/**
+					Populate the control transfer IN buffer with the response, we'll chunk this up into multiple (if required) IN tokens later.
+				 */
+				USBProcessStandardRequest(usbControlTransferP);			
+			}
+			else
+			{
+				/**
+					The IN based endpoint pipe will reflect the data sent in the last transaction, we need to populate it ready for the next IN token from the host.
+				 */
+				usbControlTransferP->transmittedLength += usbControlTransferP->usbEndpointP->usbEndpointInPipeP->cnt;
+				
+				if (usbControlTransferP->transmittedLength >= usbControlTransferP->actualLength)
+				{
+					USBControlTransferReportStatus(usbControlTransferP);
+					transmitRequired = false;
+				}
+			}
+			
+			/**
+				Load the IN endpoint data buffer with the next chunk of data from the control transfer IN data buffer (holding the full response)
+			 */	
+			if (transmitRequired)
+			{
+				uint16_t maxPacketSize = usbControlTransferP->usbEndpointP->usbEndpointConfigurationP->maxPacketSize;
+				uint16_t remainingSize = usbControlTransferP->actualLength - usbControlTransferP->transmittedLength;
+				uint16_t size = (remainingSize > maxPacketSize ? maxPacketSize : remainingSize);
+				
+				usbControlTransferP->usbEndpointP->usbEndpointInPipeP->cnt = size;
+				usbControlTransferP->usbEndpointP->usbEndpointInPipeP->auxData = 0;
+				memcpy((ptr_t)usbControlTransferP->usbEndpointP->usbEndpointInPipeP->dataBufferP, (ptr_t)usbControlTransferP->usbDataBufferInP + usbControlTransferP->transmittedLength, size);
+				
+				USBEndpointResetStatus(usbControlTransferP->usbEndpointP);
+			}
+		}	
+	}
+	else
+	{
+		/**
+			There is no data stage, so just process the request
+		 */
+		USBProcessStandardRequest(usbControlTransferP);
+		USBControlTransferReportStatus(usbControlTransferP);
+	}
 }

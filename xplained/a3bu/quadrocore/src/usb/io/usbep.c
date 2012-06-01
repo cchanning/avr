@@ -80,7 +80,7 @@ bool_t USBEndpointTableInit(const USBEndpointTableConfiguration_t const *usbEndp
 			usbEndpointP->usbEndpointConfigurationP =  &usbEndpointTableConfigurationP->endpointConfiguration[endpointNumber];
 			usbEndpointP->usbEndpointOutPipeP = usbEndpointPipeP + (endpointNumber * 2);
 			usbEndpointP->usbEndpointInPipeP = usbEndpointP->usbEndpointOutPipeP + 1;
-			
+		
 			if (! USBEndpointInit(usbEndpointP))
 			{
 				USBEndpointTableFree();

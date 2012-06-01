@@ -20,6 +20,11 @@
 #ifndef USBEP_H_
 #define USBEP_H_
 
+typedef enum _USBEndpointType
+{
+	USB_ENDPOINT_TYPE_CONTROL = USB_EP_TYPE_CONTROL_gc
+} USBEndpointType_t;
+
 typedef struct _USBEndpointPipe
 {
 	volatile uint8_t status;
@@ -42,6 +47,7 @@ typedef struct _USBEndpoint
 {
 	uint8_t endpointNumber;
 	const USBEndpointConfiguration_t *usbEndpointConfigurationP;
+	USBEndpointType_t endpointType;
 	USBEndpointPipe_t *usbEndpointOutPipeP;
 	USBEndpointPipe_t *usbEndpointInPipeP;
 } USBEndpoint_t;

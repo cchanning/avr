@@ -108,10 +108,10 @@
     <Compile Include="include\usb\io\usbio.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\usb\io\usbstddreq.h">
+    <Compile Include="include\usb\io\usbstddio.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="include\usb\io\usbstdreq.h">
+    <Compile Include="include\usb\io\usbstdio.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="include\usb\usb.h">
@@ -132,10 +132,10 @@
     <Compile Include="usb\io\usbio.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="usb\io\usbstddreq.c">
+    <Compile Include="usb\io\usbstddio.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="usb\io\usbstdreq.c">
+    <Compile Include="usb\io\usbstdio.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="usb\usb.c">

@@ -20,16 +20,7 @@
 #ifndef USBSTDDREQ_H_
 #define USBSTDDREQ_H_
 
-#include "usb/io/usbstdreq.h"
-
-typedef struct _USBStandardDeviceRequest
-{
-	uint8_t requestType;
-	uint8_t request;
-	uint16_t value;
-	uint16_t index;
-	uint16_t length;
-} USBStandardDeviceRequest_t;
+#include "usb/io/usbstdio.h"
 
 typedef struct _USBStandardDeviceDescriptor
 {
@@ -50,9 +41,9 @@ typedef struct _USBStandardDeviceDescriptor
 } USBStandardDeviceDescriptor_t;
 
 void USBDeviceReset(void);
-void USBDeviceGetDescriptor(USBStandardRequest_t *usbStandardRequestP, USBResponse_t *usbResponseP, USBTransfer_t *usbTransferP);
+void USBDeviceGetDescriptor(USBControlTransfer_t *usbControlTransferP);
 void USBDeviceSetAddress(uint8_t address);
-void USBDeviceSetDeferredAddress(USBStandardRequest_t *usbStandardRequestP, USBResponse_t *usbResponseP, USBTransfer_t *usbTransferP);
+void USBDeviceSetDeferredAddress(USBControlTransfer_t *usbControlTransferP);
 
 
 #endif /* USBSTDDREQ_H_ */

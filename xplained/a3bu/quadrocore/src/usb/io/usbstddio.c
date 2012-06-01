@@ -28,16 +28,16 @@ void USBDeviceReset(void)
 	USB.STATUS &= ~USB_BUSRST_bm;
 }
 
-void USBDeviceGetDescriptor(USBStandardRequest_t *usbStandardRequestP, USBResponse_t *usbResponseP, USBTransfer_t *usbTransferP)
+void USBDeviceGetDescriptor(USBControlTransfer_t *usbControlTransferP)
 {
-	USBStandardDeviceDescriptor_t *usbStandardDeviceDescriptorP = (USBStandardDeviceDescriptor_t *)usbTransferP->usbEndpointP->usbEndpointInPipeP->dataBufferP;
+	USBStandardDeviceDescriptor_t *usbStandardDeviceDescriptorP = (USBStandardDeviceDescriptor_t *)usbControlTransferP->usbDataBufferInP;
 	
-	usbStandardDeviceDescriptorP->length = ((USBStandardDeviceRequest_t*)usbStandardRequestP)->length;
-	usbStandardDeviceDescriptorP->descriptorType = DEVICE;
+	usbStandardDeviceDescriptorP->length = sizeof(USBStandardDeviceDescriptor_t);
+	usbStandardDeviceDescriptorP->descriptorType = USB_STANDARD_DESCRIPTOR_TYPE_DEVICE;
 	usbStandardDeviceDescriptorP->deviceClass = 0x00;
 	usbStandardDeviceDescriptorP->deviceSubClass = 0x00;
 	usbStandardDeviceDescriptorP->deviceProtocol = 0x00;
-	usbStandardDeviceDescriptorP->maxPacketSize = usbTransferP->usbEndpointP->usbEndpointConfigurationP->maxPacketSize;
+	usbStandardDeviceDescriptorP->maxPacketSize = usbControlTransferP->usbEndpointP->usbEndpointConfigurationP->maxPacketSize;
 	usbStandardDeviceDescriptorP->vendorId = 0x03EB;
 	usbStandardDeviceDescriptorP->productId = 0x2FE2;
 	usbStandardDeviceDescriptorP->deviceVersion = 0x0002;
@@ -47,35 +47,22 @@ void USBDeviceGetDescriptor(USBStandardRequest_t *usbStandardRequestP, USBRespon
 	usbStandardDeviceDescriptorP->numberOfConfigurations = 0x01;
 	usbStandardDeviceDescriptorP->usbVersion = 0x0200;
 	
-	usbResponseP->requestedByteCount = usbStandardDeviceDescriptorP->length;
-	usbResponseP->byteCount = sizeof(USBStandardDeviceDescriptor_t);
+	usbControlTransferP->actualLength = usbStandardDeviceDescriptorP->length;
 }
 
-void USBDeviceSetDeferredAddress(USBStandardRequest_t *usbStandardRequestP, USBResponse_t *usbResponseP, USBTransfer_t *usbTransferP)
+void USBDeviceSetDeferredAddress(USBControlTransfer_t *usbControlTransferP)
 {
 	//a usb address is only 7 bits long, guarantee we don't get any other garbage in the 16bit request value
-	uint8_t address = ((USBStandardDeviceRequest_t*)usbStandardRequestP)->value & 0x7F;
+	uint8_t *addressP = calloc(1, sizeof(uint8_t));
+	*addressP = ((USBStandardRequest_t*)usbControlTransferP->usbRequestP)->value & 0x7F;
 	
-	if (! (usbTransferP->callbackDataP = calloc(1, sizeof(uint8_t))))
-	{
-		return;
-	}
-	
-	*((uint8_t*)usbTransferP->callbackDataP) = address;
-	usbTransferP->callbackFuncP = &USBDeviceSetAddressCallback;
-	
-	usbResponseP->requestedByteCount = 0;
-	usbResponseP->byteCount = 0;
+	usbControlTransferP->completionStageFuncP = &USBDeviceSetAddressCallback;
+	usbControlTransferP->completionStageDataP = (ptr_t)addressP;
 }
 
-void USBDeviceSetAddressCallback(ptr_t dataP)
+void USBDeviceSetAddressCallback(ptr_t addressP)
 {
-	if (! dataP)
-	{
-		return;
-	}
-	
-	USBDeviceSetAddress(*((uint8_t *)dataP));
+	USBDeviceSetAddress(*((uint8_t *)addressP));
 }
 
 void USBDeviceSetAddress(uint8_t address)

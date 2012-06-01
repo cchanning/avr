@@ -23,8 +23,6 @@
 #include "usb/io/usbio.h"
 
 #define USB_REQUEST_TYPE_FLD_TYPE_bm 0x60
-#define USB_REQUEST_TYPE_FLD_DPTFD_HD_bm (0 << 7)
-#define USB_REQUEST_TYPE_FLD_DPTFD_DH_bm (1 << 7)
 #define USB_REQUEST_TYPE_FLD_TYPE_STANDARD_bm (0 << 6)
 #define USB_REQUEST_TYPE_FLD_TYPE_CLASS_bm (1 << 6)
 #define USB_REQUEST_TYPE_FLD_TYPE_VENDOR_bm (2 << 5)
@@ -40,24 +38,21 @@
 
 #define USB_REQUEST_TYPE_HANDLER_COUNT 2
 
-typedef struct _USBResponse
+typedef enum _USBStandardDescriptorType
 {
-	uint16_t requestedByteCount;
-	uint16_t byteCount;
-} USBResponse_t;
-
-enum DescriptorType
-{
-	DEVICE = 0x01	
-};
+	USB_STANDARD_DESCRIPTOR_TYPE_DEVICE = 0x01	
+} USBStandardDescriptorType_t;
 
 typedef struct _USBStandardRequest
 {
 	uint8_t requestType;
 	uint8_t request;
+	uint16_t value;
+	uint16_t index;
+	uint16_t length;
 } USBStandardRequest_t;
 
-typedef void (*USB_STANDARD_REQUEST_HANDLER_FUNC)(USBStandardRequest_t *usbStandardRequestP, USBResponse_t *usbResponseP, USBTransfer_t *usbTransferP);
+typedef void (*USB_STANDARD_REQUEST_HANDLER_FUNC)(USBControlTransfer_t *usbControlTransferP);
 
 typedef struct _USBStandardRequestHandler
 {
@@ -67,6 +62,7 @@ typedef struct _USBStandardRequestHandler
 	USB_STANDARD_REQUEST_HANDLER_FUNC handlerFuncP;
 } USBStandardRequestHandler_t;
 
-void USBProcessStandardRequest(USBTransfer_t *usbTransferP);
+void USBParseStandardRequestMetaData(USBControlTransfer_t *usbControlTransferP);
+bool_t USBProcessStandardRequest(USBControlTransfer_t *usbControlTransferP);
 
 #endif /* USBSTDREQ_H_ */

@@ -27,6 +27,6 @@ typedef _Bool	bool_t;
 typedef signed char sint8_t;
 typedef void* ptr_t;
 
-typedef void (*CALLBACK_FUNC)(ptr_t);
+typedef void (*CALLBACK_FUNC)(ptr_t dataP);
 
 #endif /* TYPEDEFS_H_ */

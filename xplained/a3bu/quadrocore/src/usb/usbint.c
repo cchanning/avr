@@ -19,8 +19,6 @@
 
 #include "quadrocore.h"
 
-static USBTransfer_t *usbTransferP = NULL;
-
 ISR(USB_BUSEVENT_vect)
 {
 	DisableGlobalInterrupts();
@@ -73,42 +71,25 @@ ISR(USB_TRNCOMPL_vect)
 {
 	DisableGlobalInterrupts();
 	{	
-		//temp until we setup the transfer table
-		if (! usbTransferP)
-		{
-			usbTransferP = calloc(1, sizeof(USBTransfer_t));
-			usbTransferP->usbEndpointP = USBEndpointGetDefault();
-			usbTransferP->callbackDataP = NULL;
-			usbTransferP->callbackFuncP = NULL;
-		}
-		
+		//stub out the endpoint to be the default for now (until we start using the FIFO)
+		USBEndpoint_t *usbEndpointP = USBEndpointGetDefault();
+
 		if (USB.INTFLAGSBSET & USB_SETUPIF_bm)
 		{
 			USB.INTFLAGSBCLR = USB_SETUPIF_bm;
-			USBProcessStandardRequest(usbTransferP);
-			USBEndpointResetOutputBuffer(usbTransferP->usbEndpointP);	
 		}
 		
 		if (USB.INTFLAGSBSET & USB_TRNIF_bm)
 		{
-			USB.INTFLAGSBCLR = USB_TRNIF_bm;
-			
-			//this is an IN token
-			if (! USBEndpointHasOutputData(usbTransferP->usbEndpointP))
+			USB.INTFLAGSBCLR = USB_TRNIF_bm;	
+		}
+		
+		switch (usbEndpointP->endpointType)
+		{
+			case USB_ENDPOINT_TYPE_CONTROL:
 			{
-				if (usbTransferP->callbackFuncP)
-				{
-					(*usbTransferP->callbackFuncP)(usbTransferP->callbackDataP);
-					free(usbTransferP->callbackDataP);
-					usbTransferP->callbackFuncP = NULL;
-					usbTransferP->callbackDataP = NULL;
-				}	
-			}
-			else
-			{
-				USBEndpointResetOutputBuffer(usbTransferP->usbEndpointP);
-			}
-			
+				USBProcessControlTransfer(usbEndpointP);
+			} break;
 		}
 	}	
 	EnableGlobalInterrupts();	

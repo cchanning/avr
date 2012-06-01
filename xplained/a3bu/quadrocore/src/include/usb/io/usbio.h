@@ -23,37 +23,50 @@
 #include "type/type.h"
 #include "usb/io/usbep.h"
 
-typedef enum _USBTransferDirection
+typedef enum _USBTransferType
+{
+	USB_TRANSFER_TYPE_CONTROL = 0
+} USBTransferType_t;
+
+typedef enum _USBControlTransferDirection
 {
 	USB_TRANSFER_DIRECTION_IN = 0,
 	USB_TRANSFER_DIRECTION_OUT = 1
-} USBTransferDirection_t;
+} USBControlTransferDirection_t;
 
-typedef enum _USBTransferStage
+typedef enum _USBControlTransferStage
 {
-	USB_TRANSFER_STAGE_SETUP = 0,
+	USB_TRANSFER_STAGE_INITIAL = 0,
 	USB_TRANSFER_STAGE_DATA = 1,
-	USB_TRANSFER_STAGE_STATUS = 2
+	USB_TRANSFER_STAGE_AKNOWLEDGED = 2
 } USBTransferStage_t;
 
-typedef struct _USBTransfer
+typedef struct _USBControlTransfer
 {
-	USBTransferDirection_t usbTransferDirection;
+	ptr_t usbRequestP;
+	ptr_t usbDataBufferOutP;
+	ptr_t usbDataBufferInP;
+	USBTransferType_t usbTransferType;
+	USBControlTransferDirection_t usbTransferDirection;
 	USBTransferStage_t usbTransferStage;
 	USBEndpoint_t *usbEndpointP;
-	CALLBACK_FUNC callbackFuncP;
-	void *callbackDataP;
+	uint16_t requestedLength;
+	uint16_t actualLength;
+	uint16_t transmittedLength;
+	CALLBACK_FUNC completionStageFuncP;
+	void *completionStageDataP;
 	
-} USBTransfer_t;
+} USBControlTransfer_t;
 
-bool_t USBTransferTableInit(USBEndpointTableConfiguration_t *usbEndpointTableConfigurationP);
-USBTransfer_t* USBGetTransfer(USBEndpoint_t *usbEndpointP);
+bool_t USBTransferTableInit(uint16_t usbControlTransferBufferSize, uint8_t endpointCount);
+bool_t USBControlTransferStarted(USBEndpoint_t *usbEndpointP);
+USBControlTransfer_t* USBBeginControlTransfer(USBEndpoint_t *usbEndpointP);
+void USBEndControlTransfer(USBEndpoint_t *usbEndpointP);
+USBControlTransfer_t* USBGetControlTransfer(USBEndpoint_t *usbEndpointP);
+void USBResetControlTransfer(USBControlTransfer_t *usbControlTransferP);
+void USBControlTransferReportStatus(USBControlTransfer_t *usbControlTransferP);
 
-bool_t USBEndpointHasOutputData(USBEndpoint_t *usbEndpointP);
-void USBEndpointResetOutputBuffer(USBEndpoint_t *usbEndpointP);
-void USBEndpointResetStatus(USBEndpoint_t *usbEndpointP);
-void USBEndpointTransmit(USBEndpoint_t *usbEndpointP, size_t requestedByteCount, size_t byteCount);
-bool_t USBEndpointIsWritable(USBEndpoint_t *usbEndpointP);
-bool_t USBEndpointIsReadable(USBEndpoint_t *usbEndpointP);
+USBControlTransferDirection_t USBGetUSBControlTransferDirection(USBControlTransfer_t *usbControlTransferP);
+void USBProcessControlTransfer(USBEndpoint_t *usbEndpointP);
 
 #endif /* USBIO_H_ */

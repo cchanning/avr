@@ -46,68 +46,50 @@ USBStandardRequestHandler_t* USBStandardRequestHandlerTableGet(void)
 
 USBStandardRequestHandler_t* USBStandardRequestResolveHandler(USBStandardRequest_t *usbStandardRequestP)
 {
-	if (! usbStandardRequestP)
+	USBStandardRequestHandler_t *usbStandardRequestHandlerTableP = USBStandardRequestHandlerTableGet();
+		
+	if (! usbStandardRequestHandlerTableP)
 	{
 		return NULL;
 	}
-
+		
+	//decode the type and recipient from the request
 	{
-		USBStandardRequestHandler_t *usbStandardRequestHandlerTableP = USBStandardRequestHandlerTableGet();
-		
-		if (! usbStandardRequestHandlerTableP)
-		{
-			return NULL;
-		}
-		
-		//decode the type and recipient from the request
 		uint8_t type = usbStandardRequestP->requestType & USB_REQUEST_TYPE_FLD_TYPE_bm;
 		uint8_t recipient = usbStandardRequestP->requestType & USB_REQUEST_TYPE_FLD_RECIPIENT_bm;
 		
+		for (USBStandardRequestHandler_t *usbStandardRequestHandlerP = usbStandardRequestHandlerTableP; usbStandardRequestHandlerP < (usbStandardRequestHandlerTableP + USB_REQUEST_TYPE_HANDLER_COUNT); usbStandardRequestHandlerP++)
 		{
-			USBStandardRequestHandler_t *usbStandardRequestHandlerP = NULL;
-		
-			for (usbStandardRequestHandlerP = usbStandardRequestHandlerTableP; usbStandardRequestHandlerP < (usbStandardRequestHandlerTableP + USB_REQUEST_TYPE_HANDLER_COUNT); usbStandardRequestHandlerP++)
+			// if we get match on the id, just double check that we're scoped properly for request just in case request ids are not unique
+			if ((usbStandardRequestHandlerP->id == usbStandardRequestP->request) && (usbStandardRequestHandlerP->recipient == recipient) && (usbStandardRequestHandlerP->type == type))
 			{
-				// if we get match on the id, just double check that we're scoped properly for request just in case request ids are not unique
-				if ((usbStandardRequestHandlerP->id == usbStandardRequestP->request) && (usbStandardRequestHandlerP->recipient == recipient) && (usbStandardRequestHandlerP->type == type))
-				{
-					return usbStandardRequestHandlerP;
-				}
+				return usbStandardRequestHandlerP;
 			}
 		}			
 	}
-		
+				
 	return NULL;
 }
 
-void USBProcessStandardRequest(USBTransfer_t *usbTransferP)
-{			
-	if (! usbTransferP->usbEndpointP->usbEndpointOutPipeP->cnt)
+void USBParseStandardRequestMetaData(USBControlTransfer_t *usbControlTransferP)
+{
+	USBStandardRequest_t *usbStandardRequestP = (USBStandardRequest_t *)usbControlTransferP->usbRequestP;
+	usbControlTransferP->requestedLength = usbStandardRequestP->length;
+	usbControlTransferP->usbTransferDirection = ((usbStandardRequestP->requestType >> 7) > 0 ? USB_TRANSFER_DIRECTION_IN : USB_TRANSFER_DIRECTION_OUT);
+}
+
+bool_t USBProcessStandardRequest(USBControlTransfer_t *usbControlTransferP)
+{
+	USBStandardRequestHandler_t *usbStandardRequestHandlerP = USBStandardRequestResolveHandler((USBStandardRequest_t *)usbControlTransferP->usbRequestP);
+		
+	// this isn't a standard request type
+	if (! usbStandardRequestHandlerP)
 	{
-		return;
+		return false;
 	}
 	
-	{
-		USBStandardRequest_t *usbStandardRequestP = (USBStandardRequest_t *)usbTransferP->usbEndpointP->usbEndpointOutPipeP->dataBufferP;
-		USBStandardRequestHandler_t *usbStandardRequestHandlerP = USBStandardRequestResolveHandler(usbStandardRequestP);
-		
-		if (! usbStandardRequestHandlerP)
-		{
-			return;
-		}
-		
-		// handle the request and transmit the response
-		{
-			USBResponse_t *usbResponseP = NULL;
-			
-			if (! (usbResponseP = calloc(1, sizeof(USBResponse_t))))
-			{
-				return;
-			}
-			
-			(*usbStandardRequestHandlerP->handlerFuncP)(usbStandardRequestP, usbResponseP, usbTransferP);
-			USBEndpointTransmit(usbTransferP->usbEndpointP, usbResponseP->requestedByteCount, usbResponseP->byteCount);
-			free(usbResponseP);
-		}
-	}
+	// delegate to the request handler
+	(*usbStandardRequestHandlerP->handlerFuncP)(usbControlTransferP);
+	
+	return true;
 }

@@ -23,12 +23,13 @@
 #include "usb/io/usbep.h"
 #include "usb/io/usbep.h"
 #include "usb/io/usbio.h"
-#include "usb/io/usbstdreq.h"
-#include "usb/io/usbstddreq.h"
+#include "usb/io/usbstdio.h"
+#include "usb/io/usbstddio.h"
 #include "type/type.h"
 
 typedef struct _USBConfiguration
 {
+	uint16_t usbControlTransferBufferSize;
 	USBEndpointTableConfiguration_t usbEndpointTableConfiguration;
 } USBConfiguration_t;
 

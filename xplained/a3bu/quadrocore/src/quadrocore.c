@@ -23,16 +23,17 @@ int main(void)
 {
 	const USBConfiguration_t const usbConfiguration = 
 	{
+		.usbControlTransferBufferSize = 64,
 		.usbEndpointTableConfiguration = 
 		{
 			.endpointCount = 1,
-			.maxPacketSize = 64,
+			.maxPacketSize = 8,
 			.endpointConfiguration[0] = 
 			{
-				.type = USB_EP_TYPE_CONTROL_gc,
-				.bufferSize = 64,
-				.bufferType = USB_EP_BUFSIZE_64_gc,
-				.maxPacketSize = 64
+				.type = USB_ENDPOINT_TYPE_CONTROL,
+				.bufferSize = 8,
+				.bufferType = USB_EP_BUFSIZE_8_gc,
+				.maxPacketSize = 8
 			}
 		}			
 	};
