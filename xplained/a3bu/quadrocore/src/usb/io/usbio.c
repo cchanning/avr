@@ -33,9 +33,20 @@ bool_t USBTransferTableInit(uint16_t usbControlTransferBufferSize, uint8_t endpo
 		usbControlTransferP->usbRequestP = calloc(1, usbControlTransferBufferSize);
 		usbControlTransferP->usbDataBufferInP = calloc(1, usbControlTransferBufferSize);
 		usbControlTransferP->usbDataBufferOutP = calloc(1, usbControlTransferBufferSize);
+		usbControlTransferP->usbBufferSize = usbControlTransferBufferSize;
 	}
 	
 	return true;
+}
+
+void USBControlTransferResetAll(void)
+{
+	if (! usbTransferTableP) return;
+	
+	for (uint8_t controlTransferNumber = 0; controlTransferNumber < usbTransferTableP->rowCount; controlTransferNumber++)
+	{
+		USBResetControlTransfer(VectorGetRow(usbTransferTableP, controlTransferNumber, USBControlTransfer_t*));
+	}
 }
 
 void USBEndpointResetStatus(USBEndpoint_t *usbEndpointP)
@@ -86,9 +97,9 @@ void USBResetControlTransfer(USBControlTransfer_t *usbControlTransferP)
 	/**
 		Zero out all of the various buffers for the control transfer
 	 */
-	memset(usbControlTransferP->usbRequestP, 0, usbControlTransferP->usbEndpointP->usbEndpointConfigurationP->bufferSize);
-	memset(usbControlTransferP->usbDataBufferOutP, 0, usbControlTransferP->usbEndpointP->usbEndpointConfigurationP->bufferSize);
-	memset(usbControlTransferP->usbDataBufferInP, 0, usbControlTransferP->usbEndpointP->usbEndpointConfigurationP->bufferSize);
+	memset(usbControlTransferP->usbRequestP, 0, usbControlTransferP->usbBufferSize);
+	memset(usbControlTransferP->usbDataBufferOutP, 0, usbControlTransferP->usbBufferSize);
+	memset(usbControlTransferP->usbDataBufferInP, 0, usbControlTransferP->usbBufferSize);
 	
 	usbControlTransferP->completionStageDataP = NULL;
 	usbControlTransferP->completionStageFuncP = NULL;
@@ -103,9 +114,9 @@ void USBResetControlTransfer(USBControlTransfer_t *usbControlTransferP)
 
 bool_t USBControlTransferStarted(USBEndpoint_t *usbEndpointP)
 {	
-	USBControlTransfer_t *usbTransferP = USBGetControlTransfer(usbEndpointP);
+	USBControlTransfer_t *usbControlTransferP = USBGetControlTransfer(usbEndpointP);
 		
-	if ((! usbEndpointP) || (! usbTransferP->usbEndpointP))
+	if ((! usbEndpointP) || (! usbControlTransferP->usbEndpointP))
 	{
 		return false;
 	}

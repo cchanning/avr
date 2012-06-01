@@ -78,6 +78,7 @@ bool_t USBEndpointTableInit(const USBEndpointTableConfiguration_t const *usbEndp
 			USBEndpoint_t *usbEndpointP = (USBEndpoint_t *)VectorCreateRow(usbEndpointTableP->usbEndpointListP);
 			usbEndpointP->endpointNumber = endpointNumber;
 			usbEndpointP->usbEndpointConfigurationP =  &usbEndpointTableConfigurationP->endpointConfiguration[endpointNumber];
+			usbEndpointP->endpointType = usbEndpointP->usbEndpointConfigurationP->type;
 			usbEndpointP->usbEndpointOutPipeP = usbEndpointPipeP + (endpointNumber * 2);
 			usbEndpointP->usbEndpointInPipeP = usbEndpointP->usbEndpointOutPipeP + 1;
 		

@@ -23,6 +23,7 @@ void USBDeviceSetAddressCallback(ptr_t dataP);
 
 void USBDeviceReset(void)
 {
+	USBControlTransferResetAll();
 	USBEndpointResetAll();
 	USBDeviceSetAddress(0);
 	USB.STATUS &= ~USB_BUSRST_bm;

@@ -46,6 +46,7 @@ typedef struct _USBControlTransfer
 	ptr_t usbRequestP;
 	ptr_t usbDataBufferOutP;
 	ptr_t usbDataBufferInP;
+	uint16_t usbBufferSize;
 	USBTransferType_t usbTransferType;
 	USBControlTransferDirection_t usbTransferDirection;
 	USBTransferStage_t usbTransferStage;
@@ -59,6 +60,7 @@ typedef struct _USBControlTransfer
 } USBControlTransfer_t;
 
 bool_t USBTransferTableInit(uint16_t usbControlTransferBufferSize, uint8_t endpointCount);
+void USBControlTransferResetAll(void);
 bool_t USBControlTransferStarted(USBEndpoint_t *usbEndpointP);
 USBControlTransfer_t* USBBeginControlTransfer(USBEndpoint_t *usbEndpointP);
 void USBEndControlTransfer(USBEndpoint_t *usbEndpointP);

@@ -81,7 +81,8 @@ ISR(USB_TRNCOMPL_vect)
 		
 		if (USB.INTFLAGSBSET & USB_TRNIF_bm)
 		{
-			USB.INTFLAGSBCLR = USB_TRNIF_bm;	
+			USB.INTFLAGSBCLR = USB_TRNIF_bm;
+			USB.FIFOWP = 0;
 		}
 		
 		switch (usbEndpointP->endpointType)
