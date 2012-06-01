@@ -62,7 +62,7 @@ void USBControlTransferReportStatus(USBControlTransfer_t *usbControlTransferP)
 	if (usbControlTransferP->usbTransferDirection == USB_TRANSFER_DIRECTION_OUT)
 	{
 		usbControlTransferP->usbEndpointP->usbEndpointInPipeP->auxData = 0;
-		usbControlTransferP->usbEndpointP->usbEndpointInPipeP->cnt = USB_EP_ZLP_bm | 0;				
+		usbControlTransferP->usbEndpointP->usbEndpointInPipeP->cnt = 0;				
 	}
 	
 	USBEndpointResetStatus(usbControlTransferP->usbEndpointP);
@@ -181,13 +181,21 @@ void USBProcessControlTransfer(USBEndpoint_t *usbEndpointP)
 			/**
 				We have all of the data we need from the host, so process the request
 			 */
-			if (usbControlTransferP->transmittedLength >= usbControlTransferP->actualLength)
+			if (usbControlTransferP->transmittedLength >= usbControlTransferP->requestedLength)
 			{
 				USBProcessStandardRequest(usbControlTransferP);
 				USBControlTransferReportStatus(usbControlTransferP);
 			}
 			else
 			{
+				/**
+					The host has sent us some data, copy it in to the control transfer OUT data buffer.
+				 */
+				if (usbControlTransferP->usbEndpointP->usbEndpointOutPipeP->cnt > 0)
+				{
+					memcpy(usbControlTransferP->usbDataBufferOutP + usbControlTransferP->transmittedLength, usbControlTransferP->usbEndpointP->usbEndpointOutPipeP, usbControlTransferP->usbEndpointP->usbEndpointOutPipeP->cnt);	
+				}
+				
 				/**
 					We don't have all of the data yet, so clear the endpoint status to allow the host to keep sending us OUT tokens.
 				 */
