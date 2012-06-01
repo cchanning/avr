@@ -31,16 +31,26 @@ USBStandardRequestHandler_t* USBStandardRequestHandlerTableGet(void)
 		USB_STANDARD_REQUEST_HANDLER_TABLE[i].recipient = USB_REQUEST_TYPE_FLD_RECIPIENT_DEVICE_bm;
 		USB_STANDARD_REQUEST_HANDLER_TABLE[i].id = USB_REQUEST_DEVICE_SET_ADDRESS;
 		USB_STANDARD_REQUEST_HANDLER_TABLE[i].handlerFuncP = &USBDeviceSetDeferredAddress;
-		USB_STANDARD_REQUEST_HANDLER_TABLE[i].checkValue = false;
+		USB_STANDARD_REQUEST_HANDLER_TABLE[i].compareValueHighByte = false;
+		USB_STANDARD_REQUEST_HANDLER_TABLE[i].compareValueLowByte = false;
 		
 		i++;
 		USB_STANDARD_REQUEST_HANDLER_TABLE[i].type = USB_REQUEST_TYPE_FLD_TYPE_STANDARD_bm;
 		USB_STANDARD_REQUEST_HANDLER_TABLE[i].recipient = USB_REQUEST_TYPE_FLD_RECIPIENT_DEVICE_bm;
 		USB_STANDARD_REQUEST_HANDLER_TABLE[i].id = USB_REQUEST_DEVICE_GET_DESCRIPTOR;
 		USB_STANDARD_REQUEST_HANDLER_TABLE[i].handlerFuncP = &USBDeviceGetDescriptor;
-		USB_STANDARD_REQUEST_HANDLER_TABLE[i].checkValue = true;
+		USB_STANDARD_REQUEST_HANDLER_TABLE[i].compareValueHighByte = true;
+		USB_STANDARD_REQUEST_HANDLER_TABLE[i].compareValueLowByte = false;
 		USB_STANDARD_REQUEST_HANDLER_TABLE[i].valueHighByte = 0x01;
-		USB_STANDARD_REQUEST_HANDLER_TABLE[i].valueLowByte = 0x00;
+		
+		i++;
+		USB_STANDARD_REQUEST_HANDLER_TABLE[i].type = USB_REQUEST_TYPE_FLD_TYPE_STANDARD_bm;
+		USB_STANDARD_REQUEST_HANDLER_TABLE[i].recipient = USB_REQUEST_TYPE_FLD_RECIPIENT_DEVICE_bm;
+		USB_STANDARD_REQUEST_HANDLER_TABLE[i].id = USB_REQUEST_DEVICE_GET_DESCRIPTOR;
+		USB_STANDARD_REQUEST_HANDLER_TABLE[i].handlerFuncP = &USBDeviceGetConfigurationDescriptor;
+		USB_STANDARD_REQUEST_HANDLER_TABLE[i].compareValueHighByte = true;
+		USB_STANDARD_REQUEST_HANDLER_TABLE[i].compareValueLowByte = false;
+		USB_STANDARD_REQUEST_HANDLER_TABLE[i].valueHighByte = 0x02;
 		
 		usbSetupRequestHandlerTableInitialized = true;
 	}
@@ -68,15 +78,32 @@ USBStandardRequestHandler_t* USBStandardRequestResolveHandler(USBStandardRequest
 			if ((usbStandardRequestHandlerP->id == usbStandardRequestP->request) && (usbStandardRequestHandlerP->recipient == recipient) && (usbStandardRequestHandlerP->type == type))
 			{
 				// we need to examine the request further, as some requests use the value field to specify additional qualifying information e.g. descriptor type
-				if (usbStandardRequestHandlerP->checkValue)
+				if ((usbStandardRequestHandlerP->compareValueHighByte) || (usbStandardRequestHandlerP->compareValueLowByte))
 				{
 					uint16_t value = usbStandardRequestP->value;
 					uint8_t valueHighByte = (value >> 8);
 					uint8_t valueLowByte = (value & 0x00FF);
 					
-					if ((usbStandardRequestHandlerP->valueHighByte == valueHighByte) && (usbStandardRequestHandlerP->valueLowByte == valueLowByte))
+					if ((usbStandardRequestHandlerP->compareValueHighByte) && (usbStandardRequestHandlerP->compareValueLowByte))
 					{
-						return usbStandardRequestHandlerP;
+						if ((usbStandardRequestHandlerP->valueHighByte == valueHighByte) && (usbStandardRequestHandlerP->valueLowByte == valueLowByte))
+						{
+							return usbStandardRequestHandlerP;
+						}	
+					}
+					else if ((usbStandardRequestHandlerP->compareValueHighByte) && (! usbStandardRequestHandlerP->compareValueLowByte))
+					{
+						if (usbStandardRequestHandlerP->valueHighByte == valueHighByte)
+						{
+							return usbStandardRequestHandlerP;
+						}
+					}
+					else if ((! usbStandardRequestHandlerP->compareValueHighByte) && (usbStandardRequestHandlerP->compareValueLowByte))
+					{
+						if (usbStandardRequestHandlerP->valueLowByte == valueLowByte)
+						{
+							return usbStandardRequestHandlerP;
+						}												
 					}
 				}
 				else

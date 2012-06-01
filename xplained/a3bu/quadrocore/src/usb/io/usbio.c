@@ -21,6 +21,10 @@
 
 static Vector_t *usbTransferTableP = NULL;
 
+void USBProcessControlTransferOutput(USBControlTransfer_t *usbControlTransferP);
+void USBProcessControlTransferInput(USBControlTransfer_t *usbControlTransferP);
+bool_t USBProcessControlTransferRequest(USBControlTransfer_t *usbControlTransferP);
+
 bool_t USBTransferTableInit(uint16_t usbControlTransferBufferSize, uint8_t endpointCount)
 {
 	if (usbTransferTableP) return true;
@@ -167,6 +171,95 @@ void USBEndControlTransfer(USBEndpoint_t *usbEndpointP)
 	USBResetControlTransfer(usbTransferP);
 }
 
+void USBProcessControlTransferOutput(USBControlTransfer_t *usbControlTransferP)
+{
+	usbControlTransferP->transmittedLength += usbControlTransferP->usbEndpointP->usbEndpointOutPipeP->cnt;
+			
+	/**
+		We have all of the data we need from the host, so process the request
+		*/
+	if (usbControlTransferP->transmittedLength >= usbControlTransferP->requestedLength)
+	{
+		if (USBProcessControlTransferRequest(usbControlTransferP))
+		{
+			USBControlTransferReportStatus(usbControlTransferP);
+		}
+	}
+	else
+	{
+		/**
+			The host has sent us some data, copy it in to the control transfer OUT data buffer.
+		*/
+		if (usbControlTransferP->usbEndpointP->usbEndpointOutPipeP->cnt > 0)
+		{
+			memcpy((ptr_t)usbControlTransferP->usbDataBufferOutP + usbControlTransferP->transmittedLength, (ptr_t)usbControlTransferP->usbEndpointP->usbEndpointOutPipeP->dataBufferP, usbControlTransferP->usbEndpointP->usbEndpointOutPipeP->cnt);	
+		}
+				
+		/**
+			We don't have all of the data yet, so clear the endpoint status to allow the host to keep sending us OUT tokens.
+		*/
+		USBEndpointResetStatus(usbControlTransferP->usbEndpointP);
+	}	
+}
+
+void USBProcessControlTransferInput(USBControlTransfer_t *usbControlTransferP)
+{
+	bool_t transmitRequired = true;
+			
+	if (usbControlTransferP->usbEndpointP->usbEndpointInPipeP->cnt == 0)
+	{
+		/**
+			Populate the control transfer IN buffer with the response by processing the request, we'll chunk this up into multiple (if required) IN tokens later.
+		*/
+		if (! USBProcessControlTransferRequest(usbControlTransferP))
+		{
+			return;
+		}
+	}
+	else
+	{
+		/**
+			The IN based endpoint pipe will reflect the data sent in the last transaction, we need to populate it ready for the next IN token from the host.
+		*/
+		usbControlTransferP->transmittedLength += usbControlTransferP->usbEndpointP->usbEndpointInPipeP->cnt;
+				
+		if (usbControlTransferP->transmittedLength >= usbControlTransferP->actualLength)
+		{
+			USBControlTransferReportStatus(usbControlTransferP);
+			transmitRequired = false;
+		}
+	}
+			
+	/**
+		Load the IN endpoint data buffer with the next chunk of data from the control transfer IN data buffer (holding the full response)
+	*/	
+	if (transmitRequired)
+	{
+		uint16_t maxPacketSize = usbControlTransferP->usbEndpointP->usbEndpointConfigurationP->maxPacketSize;
+		uint16_t remainingSize = usbControlTransferP->actualLength - usbControlTransferP->transmittedLength;
+		uint16_t size = (remainingSize > maxPacketSize ? maxPacketSize : remainingSize);
+				
+		usbControlTransferP->usbEndpointP->usbEndpointInPipeP->cnt = size;
+		usbControlTransferP->usbEndpointP->usbEndpointInPipeP->auxData = 0;
+		memcpy((ptr_t)usbControlTransferP->usbEndpointP->usbEndpointInPipeP->dataBufferP, (ptr_t)usbControlTransferP->usbDataBufferInP + usbControlTransferP->transmittedLength, size);
+				
+		USBEndpointResetStatus(usbControlTransferP->usbEndpointP);
+	}	
+}
+
+bool_t USBProcessControlTransferRequest(USBControlTransfer_t *usbControlTransferP)
+{
+	if (! USBProcessStandardRequest(usbControlTransferP))
+	{
+		USBEndpointSetStalled(usbControlTransferP->usbEndpointP);
+		USBEndControlTransfer(usbControlTransferP->usbEndpointP);
+		
+		return false;
+	}
+	
+	return true;
+}
+
 void USBProcessControlTransfer(USBEndpoint_t *usbEndpointP)
 {
 	USBControlTransfer_t *usbControlTransferP = (! USBControlTransferStarted(usbEndpointP) ? USBBeginControlTransfer(usbEndpointP) : USBGetControlTransfer(usbEndpointP));
@@ -200,37 +293,7 @@ void USBProcessControlTransfer(USBEndpoint_t *usbEndpointP)
 		 */
 		if (usbControlTransferP->usbTransferDirection == USB_TRANSFER_DIRECTION_OUT)
 		{
-			usbControlTransferP->transmittedLength += usbControlTransferP->usbEndpointP->usbEndpointOutPipeP->cnt;
-			
-			/**
-				We have all of the data we need from the host, so process the request
-			 */
-			if (usbControlTransferP->transmittedLength >= usbControlTransferP->requestedLength)
-			{
-				if (! USBProcessStandardRequest(usbControlTransferP))
-				{
-					USBEndpointSetStalled(usbEndpointP);
-					USBEndControlTransfer(usbEndpointP);
-					return;
-				}
-				
-				USBControlTransferReportStatus(usbControlTransferP);
-			}
-			else
-			{
-				/**
-					The host has sent us some data, copy it in to the control transfer OUT data buffer.
-				 */
-				if (usbControlTransferP->usbEndpointP->usbEndpointOutPipeP->cnt > 0)
-				{
-					memcpy((ptr_t)usbControlTransferP->usbDataBufferOutP + usbControlTransferP->transmittedLength, (ptr_t)usbControlTransferP->usbEndpointP->usbEndpointOutPipeP->dataBufferP, usbControlTransferP->usbEndpointP->usbEndpointOutPipeP->cnt);	
-				}
-				
-				/**
-					We don't have all of the data yet, so clear the endpoint status to allow the host to keep sending us OUT tokens.
-				 */
-				USBEndpointResetStatus(usbControlTransferP->usbEndpointP);
-			}
+			USBProcessControlTransferOutput(usbControlTransferP);
 		}
 		
 		/**
@@ -239,63 +302,17 @@ void USBProcessControlTransfer(USBEndpoint_t *usbEndpointP)
 		 */
 		if (usbControlTransferP->usbTransferDirection == USB_TRANSFER_DIRECTION_IN)
 		{
-			bool_t transmitRequired = true;
-			
-			if (usbControlTransferP->usbEndpointP->usbEndpointInPipeP->cnt == 0)
-			{
-				/**
-					Populate the control transfer IN buffer with the response, we'll chunk this up into multiple (if required) IN tokens later.
-				 */
-				if (! USBProcessStandardRequest(usbControlTransferP))
-				{
-					USBEndpointSetStalled(usbEndpointP);
-					USBEndControlTransfer(usbEndpointP);
-					return;
-				}		
-			}
-			else
-			{
-				/**
-					The IN based endpoint pipe will reflect the data sent in the last transaction, we need to populate it ready for the next IN token from the host.
-				 */
-				usbControlTransferP->transmittedLength += usbControlTransferP->usbEndpointP->usbEndpointInPipeP->cnt;
-				
-				if (usbControlTransferP->transmittedLength >= usbControlTransferP->actualLength)
-				{
-					USBControlTransferReportStatus(usbControlTransferP);
-					transmitRequired = false;
-				}
-			}
-			
-			/**
-				Load the IN endpoint data buffer with the next chunk of data from the control transfer IN data buffer (holding the full response)
-			 */	
-			if (transmitRequired)
-			{
-				uint16_t maxPacketSize = usbControlTransferP->usbEndpointP->usbEndpointConfigurationP->maxPacketSize;
-				uint16_t remainingSize = usbControlTransferP->actualLength - usbControlTransferP->transmittedLength;
-				uint16_t size = (remainingSize > maxPacketSize ? maxPacketSize : remainingSize);
-				
-				usbControlTransferP->usbEndpointP->usbEndpointInPipeP->cnt = size;
-				usbControlTransferP->usbEndpointP->usbEndpointInPipeP->auxData = 0;
-				memcpy((ptr_t)usbControlTransferP->usbEndpointP->usbEndpointInPipeP->dataBufferP, (ptr_t)usbControlTransferP->usbDataBufferInP + usbControlTransferP->transmittedLength, size);
-				
-				USBEndpointResetStatus(usbControlTransferP->usbEndpointP);
-			}
+			USBProcessControlTransferInput(usbControlTransferP);
 		}	
 	}
 	/**
-		There is no data stage, so just process the request
+		There is no data stage, so just process the request and report back the status
 	*/
 	else
 	{
-		if (! USBProcessStandardRequest(usbControlTransferP))
+		if (USBProcessControlTransferRequest(usbControlTransferP))
 		{
-			USBEndpointSetStalled(usbEndpointP);
-			USBEndControlTransfer(usbEndpointP);
-			return;
+			USBControlTransferReportStatus(usbControlTransferP);	
 		}
-		
-		USBControlTransferReportStatus(usbControlTransferP);
 	}
 }

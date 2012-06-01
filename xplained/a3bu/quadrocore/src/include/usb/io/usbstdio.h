@@ -36,12 +36,12 @@
 #define USB_REQUEST_DEVICE_GET_DESCRIPTOR 0x06
 #define USB_REQUEST_DEVICE_SET_ADDRESS 0x05
 
-#define USB_REQUEST_TYPE_HANDLER_COUNT 2
+#define USB_REQUEST_TYPE_HANDLER_COUNT 3
 
 typedef enum _USBStandardDescriptorType
 {
 	USB_STANDARD_DESCRIPTOR_TYPE_DEVICE = 0x01,
-	USB_STANDARD_DESCRIPTOR_TYPE_DEVICE_QUALIFIER = 0x06	
+	USB_STANDARD_DESCRIPTOR_TYPE_DEVICE_CONFIGURATION = 0x02	
 } USBStandardDescriptorType_t;
 
 typedef struct _USBStandardRequest
@@ -62,7 +62,8 @@ typedef struct _USBStandardRequestHandler
 	uint8_t id;
 	uint8_t valueLowByte;
 	uint8_t valueHighByte;
-	bool_t checkValue;
+	bool_t compareValueHighByte;
+	bool_t compareValueLowByte;
 	USB_STANDARD_REQUEST_HANDLER_FUNC handlerFuncP;
 } USBStandardRequestHandler_t;
 

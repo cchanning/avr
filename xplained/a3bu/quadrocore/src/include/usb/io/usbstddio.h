@@ -40,9 +40,21 @@ typedef struct _USBStandardDeviceDescriptor
 	uint8_t numberOfConfigurations;
 } USBStandardDeviceDescriptor_t;
 
+typedef struct _USBStandardDeviceConfigurationDescriptor
+{
+	uint8_t length;
+	uint8_t descriptorType;
+	uint16_t totalLength;
+	uint8_t numInterfaces;
+	uint8_t configurationValue;
+	uint8_t configurationIndex;
+	uint8_t attributes;
+	uint8_t maxPower;
+} USBStandardDeviceConfigurationDescriptor_t;
+
 void USBDeviceReset(void);
 void USBDeviceGetDescriptor(USBControlTransfer_t *usbControlTransferP);
-void USBDeviceGetDescriptorQualifier(USBControlTransfer_t *usbControlTransferP);
+void USBDeviceGetConfigurationDescriptor(USBControlTransfer_t *usbControlTransferP);
 void USBDeviceSetAddress(uint8_t address);
 void USBDeviceSetDeferredAddress(USBControlTransfer_t *usbControlTransferP);
 

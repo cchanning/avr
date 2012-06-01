@@ -51,6 +51,22 @@ void USBDeviceGetDescriptor(USBControlTransfer_t *usbControlTransferP)
 	usbControlTransferP->actualLength = usbStandardDeviceDescriptorP->length;
 }
 
+void USBDeviceGetConfigurationDescriptor(USBControlTransfer_t *usbControlTransferP)
+{
+	USBStandardDeviceConfigurationDescriptor_t *usbStandardDeviceConfigurationDescriptorP = (USBStandardDeviceConfigurationDescriptor_t *)usbControlTransferP->usbDataBufferInP;
+	
+	usbStandardDeviceConfigurationDescriptorP->length = sizeof(USBStandardDeviceConfigurationDescriptor_t);
+	usbStandardDeviceConfigurationDescriptorP->descriptorType = USB_STANDARD_DESCRIPTOR_TYPE_DEVICE_CONFIGURATION;
+	usbStandardDeviceConfigurationDescriptorP->totalLength = usbStandardDeviceConfigurationDescriptorP->length;
+	usbStandardDeviceConfigurationDescriptorP->numInterfaces = 0x01;
+	usbStandardDeviceConfigurationDescriptorP->configurationValue = 0x01;
+	usbStandardDeviceConfigurationDescriptorP->configurationIndex = 0x01;
+	usbStandardDeviceConfigurationDescriptorP->attributes = 0x80;
+	usbStandardDeviceConfigurationDescriptorP->maxPower = 0x50;
+	
+	usbControlTransferP->actualLength = usbStandardDeviceConfigurationDescriptorP->length;
+}
+
 void USBDeviceSetDeferredAddress(USBControlTransfer_t *usbControlTransferP)
 {
 	//a usb address is only 7 bits long, guarantee we don't get any other garbage in the 16bit request value
