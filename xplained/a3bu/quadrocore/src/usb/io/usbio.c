@@ -56,6 +56,10 @@ void USBEndpointResetStatus(USBEndpoint_t *usbEndpointP)
 		return;
 	}
 	
+	/**
+		Clearing the status register for each endpoint pipe will stop us from sending NAK responses to the host and let it know that the endpoint
+		is ready for more work (IN/OUT tokens).
+	 */
 	usbEndpointP->usbEndpointOutPipeP->status &= ~(USB_EP_SETUP_bm | USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm | USB_EP_STALLF_bm);
 	usbEndpointP->usbEndpointInPipeP->status &= ~(USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm | USB_EP_STALLF_bm);
 }
