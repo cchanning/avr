@@ -67,7 +67,8 @@ void USBEndControlTransfer(USBEndpoint_t *usbEndpointP);
 USBControlTransfer_t* USBGetControlTransfer(USBEndpoint_t *usbEndpointP);
 void USBResetControlTransfer(USBControlTransfer_t *usbControlTransferP);
 void USBControlTransferReportStatus(USBControlTransfer_t *usbControlTransferP);
-
+void USBEndpointResetStatus(USBEndpoint_t *usbEndpointP);
+void USBEndpointSetStalled(USBEndpoint_t *usbEndpointP);
 USBControlTransferDirection_t USBGetUSBControlTransferDirection(USBControlTransfer_t *usbControlTransferP);
 void USBProcessControlTransfer(USBEndpoint_t *usbEndpointP);
 

@@ -44,11 +44,13 @@ int main(void)
 		PMICInit(PMIC_HILVLEN_bm);
 		USBModuleInit(&usbConfiguration);
 		
+		
 		USBStandardRequest_t *usbStandardRequestP = (USBStandardRequest_t *)USBEndpointGetDefault()->usbEndpointOutPipeP->dataBufferP;
-		usbStandardRequestP->requestType = 0x00;
-		usbStandardRequestP->length = 0;
-		usbStandardRequestP->request = 0x05;
-		usbStandardRequestP->value = 0x04;
+		usbStandardRequestP->index = 0;
+		usbStandardRequestP->length = 10;
+		usbStandardRequestP->request = 0x06;
+		usbStandardRequestP->requestType = 0x80;
+		usbStandardRequestP->value = 0x0600;
 	}
 	EnableGlobalInterrupts();
 	

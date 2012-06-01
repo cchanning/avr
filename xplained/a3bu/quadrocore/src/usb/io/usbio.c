@@ -60,6 +60,12 @@ void USBEndpointResetStatus(USBEndpoint_t *usbEndpointP)
 	usbEndpointP->usbEndpointInPipeP->status &= ~(USB_EP_TRNCOMPL0_bm | USB_EP_BUSNACK0_bm | USB_EP_OVF_bm | USB_EP_STALLF_bm);
 }
 
+void USBEndpointSetStalled(USBEndpoint_t *usbEndpointP)
+{
+	usbEndpointP->usbEndpointOutPipeP->status |= USB_EP_STALLF_bm;
+	usbEndpointP->usbEndpointInPipeP->status |= USB_EP_STALLF_bm;
+}
+
 void USBControlTransferReportStatus(USBControlTransfer_t *usbControlTransferP)
 {
 	usbControlTransferP->usbTransferStage = USB_TRANSFER_STAGE_AKNOWLEDGED;
@@ -94,9 +100,12 @@ USBControlTransfer_t* USBGetControlTransfer(USBEndpoint_t *usbEndpointP)
 
 void USBResetControlTransfer(USBControlTransfer_t *usbControlTransferP)
 {
-	/**
-		Zero out all of the various buffers for the control transfer
-	 */
+	usbControlTransferP->usbEndpointP->usbEndpointInPipeP->cnt = 0;
+	usbControlTransferP->usbEndpointP->usbEndpointInPipeP->auxData = 0;
+	
+	usbControlTransferP->usbEndpointP->usbEndpointOutPipeP->cnt = 0;
+	usbControlTransferP->usbEndpointP->usbEndpointOutPipeP->auxData = 0;
+	
 	memset(usbControlTransferP->usbRequestP, 0, usbControlTransferP->usbBufferSize);
 	memset(usbControlTransferP->usbDataBufferOutP, 0, usbControlTransferP->usbBufferSize);
 	memset(usbControlTransferP->usbDataBufferInP, 0, usbControlTransferP->usbBufferSize);
@@ -194,7 +203,13 @@ void USBProcessControlTransfer(USBEndpoint_t *usbEndpointP)
 			 */
 			if (usbControlTransferP->transmittedLength >= usbControlTransferP->requestedLength)
 			{
-				USBProcessStandardRequest(usbControlTransferP);
+				if (! USBProcessStandardRequest(usbControlTransferP))
+				{
+					USBEndpointSetStalled(usbEndpointP);
+					USBEndControlTransfer(usbEndpointP);
+					return;
+				}
+				
 				USBControlTransferReportStatus(usbControlTransferP);
 			}
 			else
@@ -227,7 +242,12 @@ void USBProcessControlTransfer(USBEndpoint_t *usbEndpointP)
 				/**
 					Populate the control transfer IN buffer with the response, we'll chunk this up into multiple (if required) IN tokens later.
 				 */
-				USBProcessStandardRequest(usbControlTransferP);			
+				if (! USBProcessStandardRequest(usbControlTransferP))
+				{
+					USBEndpointSetStalled(usbEndpointP);
+					USBEndControlTransfer(usbEndpointP);
+					return;
+				}		
 			}
 			else
 			{
@@ -260,12 +280,18 @@ void USBProcessControlTransfer(USBEndpoint_t *usbEndpointP)
 			}
 		}	
 	}
+	/**
+		There is no data stage, so just process the request
+	*/
 	else
 	{
-		/**
-			There is no data stage, so just process the request
-		 */
-		USBProcessStandardRequest(usbControlTransferP);
+		if (! USBProcessStandardRequest(usbControlTransferP))
+		{
+			USBEndpointSetStalled(usbEndpointP);
+			USBEndControlTransfer(usbEndpointP);
+			return;
+		}
+		
 		USBControlTransferReportStatus(usbControlTransferP);
 	}
 }

@@ -55,7 +55,7 @@ void USBDeviceSetDeferredAddress(USBControlTransfer_t *usbControlTransferP)
 {
 	//a usb address is only 7 bits long, guarantee we don't get any other garbage in the 16bit request value
 	uint8_t *addressP = calloc(1, sizeof(uint8_t));
-	*addressP = ((USBStandardRequest_t*)usbControlTransferP->usbRequestP)->value & 0x7F;
+	*addressP = ((USBStandardRequest_t*)usbControlTransferP->usbRequestP)->value & 0x007F;
 	
 	usbControlTransferP->completionStageFuncP = &USBDeviceSetAddressCallback;
 	usbControlTransferP->completionStageDataP = (ptr_t)addressP;
@@ -68,11 +68,5 @@ void USBDeviceSetAddressCallback(ptr_t addressP)
 
 void USBDeviceSetAddress(uint8_t address)
 {
-	USB.ADDR = (register8_t)address;
-	
-	if (address > 0)
-	{
-		PORTR.DIR = 0xff;
-		PORTR.OUTSET = 0x00;
-	}	
+	USB.ADDR = (register8_t)address;	
 }
