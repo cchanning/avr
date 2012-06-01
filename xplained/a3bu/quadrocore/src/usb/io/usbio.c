@@ -193,7 +193,7 @@ void USBProcessControlTransfer(USBEndpoint_t *usbEndpointP)
 				 */
 				if (usbControlTransferP->usbEndpointP->usbEndpointOutPipeP->cnt > 0)
 				{
-					memcpy(usbControlTransferP->usbDataBufferOutP + usbControlTransferP->transmittedLength, usbControlTransferP->usbEndpointP->usbEndpointOutPipeP->dataBufferP, usbControlTransferP->usbEndpointP->usbEndpointOutPipeP->cnt);	
+					memcpy((ptr_t)usbControlTransferP->usbDataBufferOutP + usbControlTransferP->transmittedLength, (ptr_t)usbControlTransferP->usbEndpointP->usbEndpointOutPipeP->dataBufferP, usbControlTransferP->usbEndpointP->usbEndpointOutPipeP->cnt);	
 				}
 				
 				/**
