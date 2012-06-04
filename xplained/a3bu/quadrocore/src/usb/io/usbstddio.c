@@ -19,7 +19,7 @@
 
 #include "quadrocore.h"
 
-static const UTF8String_t DEVICE_STRINGS[] = 
+static const UTF8String_t USB_DEVICE_STRINGS[] = 
 {
 	{
 		.charP = L"QuadroCore",
@@ -101,6 +101,10 @@ void USBDeviceGetString(USBControlTransfer_t *usbControlTransferP)
 	USBStandardRequest_t *usbStandardRequestP = (USBStandardRequest_t *)usbControlTransferP->usbRequestP;
 	uint8_t stringIndex = (usbStandardRequestP->value & 0x00FF);
 	
+	/**
+		The host has requested the default string index 0, this includes a list of supported languages. We only
+		support American English.
+	 */
 	if (stringIndex == 0)
 	{
 		uint16_t *langId = (uint16_t *)&usbStandardStringDescriptorP->rawBlock;
@@ -113,7 +117,7 @@ void USBDeviceGetString(USBControlTransfer_t *usbControlTransferP)
 		UTF8String_t utfString;
 		
 		stringIndex--;
-		utfString = DEVICE_STRINGS[stringIndex];
+		utfString = USB_DEVICE_STRINGS[stringIndex];
 		usbStandardStringDescriptorP->length = utfString.lengthInBytes + 2;
 		usbStandardStringDescriptorP->descriptorType = USB_STANDARD_DESCRIPTOR_TYPE_DEVICE_STRING;
 		memcpy(&usbStandardStringDescriptorP->rawBlock, utfString.charP, utfString.lengthInBytes);
