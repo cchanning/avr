@@ -28,6 +28,4 @@ typedef struct _UTF8String
 	uint16_t lengthInBytes;
 } UTF8String_t;
 
-uint16_t ustrlen(UTF8String_t *utfStringP);
-
 #endif /* UNICODE_H_ */

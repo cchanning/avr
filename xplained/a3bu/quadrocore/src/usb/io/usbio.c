@@ -225,8 +225,29 @@ void USBProcessControlTransferInput(USBControlTransfer_t *usbControlTransferP)
 				
 		if (usbControlTransferP->transmittedLength >= usbControlTransferP->actualLength)
 		{
-			USBControlTransferReportStatus(usbControlTransferP);
-			transmitRequired = false;
+			// did we send less than the requested amount (as that's all we had to send)?
+			if (usbControlTransferP->transmittedLength < usbControlTransferP->requestedLength)
+			{
+				// is the amount sent a multiple of maxPacketSize?
+				if ((usbControlTransferP->transmittedLength % usbControlTransferP->usbEndpointP->usbEndpointConfigurationP->maxPacketSize) == 0)
+				{
+					/**
+						We need to send a ZLP to the host to indicate we're done sending the data. Set the requested length to zero. This means that when the 
+						host acknowledges our ZLP we will be able to report the status and not return to this block.
+					 */
+					usbControlTransferP->requestedLength = 0;
+				}
+				else
+				{
+					USBControlTransferReportStatus(usbControlTransferP);
+					transmitRequired = false;
+				}
+			}
+			else
+			{
+				USBControlTransferReportStatus(usbControlTransferP);
+				transmitRequired = false;				
+			}
 		}
 	}
 			
@@ -241,7 +262,11 @@ void USBProcessControlTransferInput(USBControlTransfer_t *usbControlTransferP)
 				
 		usbControlTransferP->usbEndpointP->usbEndpointInPipeP->cnt = size;
 		usbControlTransferP->usbEndpointP->usbEndpointInPipeP->auxData = 0;
-		memcpy((ptr_t)usbControlTransferP->usbEndpointP->usbEndpointInPipeP->dataBufferP, (ptr_t)usbControlTransferP->usbDataBufferInP + usbControlTransferP->transmittedLength, size);
+		
+		if (size > 0)
+		{
+			memcpy((ptr_t)usbControlTransferP->usbEndpointP->usbEndpointInPipeP->dataBufferP, (ptr_t)usbControlTransferP->usbDataBufferInP + usbControlTransferP->transmittedLength, size);
+		}
 				
 		USBEndpointResetStatus(usbControlTransferP->usbEndpointP);
 	}	
