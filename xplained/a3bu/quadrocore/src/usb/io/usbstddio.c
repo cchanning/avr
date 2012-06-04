@@ -130,6 +130,12 @@ void USBDeviceGetString(USBControlTransfer_t *usbControlTransferP)
 	usbControlTransferP->actualLength = usbStandardStringDescriptorP->length;
 }
 
+void USBDeviceGetConfiguration(USBControlTransfer_t *usbControlTransferP)
+{
+	*((uint8_t *)usbControlTransferP->usbDataBufferInP) = 0x01;
+	usbControlTransferP->actualLength = 1;
+}
+
 void USBDeviceSetConfiguration(USBControlTransfer_t * usbControlTransferP)
 {
 	/**
