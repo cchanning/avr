@@ -61,6 +61,14 @@ USBStandardRequestHandler_t* USBStandardRequestHandlerTableGet(void)
 		USB_STANDARD_REQUEST_HANDLER_TABLE[i].compareValueLowByte = false;
 		USB_STANDARD_REQUEST_HANDLER_TABLE[i].valueHighByte = 0x03;
 		
+		i++;
+		USB_STANDARD_REQUEST_HANDLER_TABLE[i].type = USB_REQUEST_TYPE_FLD_TYPE_STANDARD_bm;
+		USB_STANDARD_REQUEST_HANDLER_TABLE[i].recipient = USB_REQUEST_TYPE_FLD_RECIPIENT_DEVICE_bm;
+		USB_STANDARD_REQUEST_HANDLER_TABLE[i].id = USB_REQUEST_DEVICE_SET_CONFIGURATION;
+		USB_STANDARD_REQUEST_HANDLER_TABLE[i].handlerFuncP = &USBDeviceSetConfiguration;
+		USB_STANDARD_REQUEST_HANDLER_TABLE[i].compareValueHighByte = false;
+		USB_STANDARD_REQUEST_HANDLER_TABLE[i].compareValueLowByte = false;
+				
 		usbSetupRequestHandlerTableInitialized = true;
 	}
 	

@@ -24,6 +24,10 @@ static const UTF8String_t USB_DEVICE_STRINGS[] =
 	{
 		.charP = L"QuadroCore",
 		.lengthInBytes = sizeof(L"QuadroCore")
+	},
+	{
+		.charP = L"Quadrocopter",
+		.lengthInBytes = sizeof(L"Quadrocopter")
 	}
 };
 
@@ -51,7 +55,7 @@ void USBDeviceGetDescriptor(USBControlTransfer_t *usbControlTransferP)
 	usbStandardDeviceDescriptorP->productId = 0x2FE2;
 	usbStandardDeviceDescriptorP->deviceVersion = 0x0002;
 	usbStandardDeviceDescriptorP->manufacturerIndex = 0x01;
-	usbStandardDeviceDescriptorP->productIndex = 0x01;
+	usbStandardDeviceDescriptorP->productIndex = 0x02;
 	usbStandardDeviceDescriptorP->serialNumberIndex = 0x00;
 	usbStandardDeviceDescriptorP->numberOfConfigurations = 0x01;
 	usbStandardDeviceDescriptorP->usbVersion = 0x0200;
@@ -124,4 +128,11 @@ void USBDeviceGetString(USBControlTransfer_t *usbControlTransferP)
 	}
 	
 	usbControlTransferP->actualLength = usbStandardStringDescriptorP->length;
+}
+
+void USBDeviceSetConfiguration(USBControlTransfer_t * usbControlTransferP)
+{
+	/**
+		We only have one active configuration (always enabled), so there is nothing to do.
+	 */
 }
