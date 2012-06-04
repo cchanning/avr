@@ -57,6 +57,6 @@ void USBDeviceGetDescriptor(USBControlTransfer_t *usbControlTransferP);
 void USBDeviceGetConfigurationDescriptor(USBControlTransfer_t *usbControlTransferP);
 void USBDeviceSetAddress(uint8_t address);
 void USBDeviceSetDeferredAddress(USBControlTransfer_t *usbControlTransferP);
-
+void USBDeviceGetString(USBControlTransfer_t *usbControlTransferP);
 
 #endif /* USBSTDDREQ_H_ */

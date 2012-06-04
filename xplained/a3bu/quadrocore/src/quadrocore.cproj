@@ -102,6 +102,9 @@
     <Compile Include="include\type\type.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="include\type\unicode.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="include\usb\io\usbep.h">
       <SubType>compile</SubType>
     </Compile>

@@ -17,25 +17,17 @@
  *
  ***********************************************************************************************************************/
 
-#ifndef QUADROCORE_H_
-#define QUADROCORE_H_
+#ifndef UNICODE_H_
+#define UNICODE_H_
 
 #include <stddef.h>
-#include <stdlib.h>
-#include <string.h>
 
-#include <avr/builtins.h>
-#include <avr/io.h>
-#include <avr/common.h>
-#include <avr/interrupt.h>
-#include <avr/pgmspace.h>
-#include <util/atomic.h>
+typedef struct _UTF8String
+{
+	wchar_t *charP;
+	uint16_t lengthInBytes;
+} UTF8String_t;
 
-#include "clock/clock.h"
-#include "ccp/ccp.h"
-#include "pmic/pmic.h"
-#include "usb/usb.h"
-#include "type/type.h"
-#include "type/unicode.h"
+uint16_t ustrlen(UTF8String_t *utfStringP);
 
-#endif /* QUADROCORE_H_ */
+#endif /* UNICODE_H_ */

@@ -36,12 +36,13 @@
 #define USB_REQUEST_DEVICE_GET_DESCRIPTOR 0x06
 #define USB_REQUEST_DEVICE_SET_ADDRESS 0x05
 
-#define USB_REQUEST_TYPE_HANDLER_COUNT 3
+#define USB_REQUEST_TYPE_HANDLER_COUNT 4
 
 typedef enum _USBStandardDescriptorType
 {
 	USB_STANDARD_DESCRIPTOR_TYPE_DEVICE = 0x01,
-	USB_STANDARD_DESCRIPTOR_TYPE_DEVICE_CONFIGURATION = 0x02	
+	USB_STANDARD_DESCRIPTOR_TYPE_DEVICE_CONFIGURATION = 0x02,
+	USB_STANDARD_DESCRIPTOR_TYPE_DEVICE_STRING = 0x03	
 } USBStandardDescriptorType_t;
 
 typedef struct _USBStandardRequest
@@ -52,6 +53,13 @@ typedef struct _USBStandardRequest
 	uint16_t index;
 	uint16_t length;
 } USBStandardRequest_t;
+
+typedef struct _USBStandardStringDescriptor
+{
+	uint8_t length;
+	uint8_t descriptorType;
+	uint8_t rawBlock;
+} USBStandardStringDescriptor_t;
 
 typedef void (*USB_STANDARD_REQUEST_HANDLER_FUNC)(USBControlTransfer_t *usbControlTransferP);
 
@@ -69,5 +77,6 @@ typedef struct _USBStandardRequestHandler
 
 void USBParseStandardRequestMetaData(USBControlTransfer_t *usbControlTransferP);
 bool_t USBProcessStandardRequest(USBControlTransfer_t *usbControlTransferP);
+void USBGetString(USBControlTransfer_t *usbControlTransferP);
 
 #endif /* USBSTDREQ_H_ */

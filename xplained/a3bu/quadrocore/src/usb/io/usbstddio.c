@@ -19,6 +19,14 @@
 
 #include "quadrocore.h"
 
+static const UTF8String_t DEVICE_STRINGS[] = 
+{
+	{
+		.charP = L"QuadroCore",
+		.lengthInBytes = sizeof(L"QuadroCore")
+	}
+};
+
 void USBDeviceSetAddressCallback(ptr_t dataP);
 
 void USBDeviceReset(void)
@@ -62,7 +70,7 @@ void USBDeviceGetConfigurationDescriptor(USBControlTransfer_t *usbControlTransfe
 	usbStandardDeviceConfigurationDescriptorP->configurationValue = 0x01;
 	usbStandardDeviceConfigurationDescriptorP->configurationIndex = 0x01;
 	usbStandardDeviceConfigurationDescriptorP->attributes = 0x80;
-	usbStandardDeviceConfigurationDescriptorP->maxPower = 0x50;
+	usbStandardDeviceConfigurationDescriptorP->maxPower = 0x32;
 	
 	usbControlTransferP->actualLength = usbStandardDeviceConfigurationDescriptorP->length;
 }
@@ -85,4 +93,31 @@ void USBDeviceSetAddressCallback(ptr_t addressP)
 void USBDeviceSetAddress(uint8_t address)
 {
 	USB.ADDR = (register8_t)address;	
+}
+
+void USBDeviceGetString(USBControlTransfer_t *usbControlTransferP)
+{
+	USBStandardStringDescriptor_t *usbStandardStringDescriptorP = (USBStandardStringDescriptor_t *)usbControlTransferP->usbDataBufferInP;
+	USBStandardRequest_t *usbStandardRequestP = (USBStandardRequest_t *)usbControlTransferP->usbRequestP;
+	uint8_t stringIndex = (usbStandardRequestP->value & 0x00FF);
+	
+	if (stringIndex == 0)
+	{
+		uint16_t *langId = (uint16_t *)&usbStandardStringDescriptorP->rawBlock;
+		usbStandardStringDescriptorP->length = sizeof(uint16_t) + 2;
+		usbStandardStringDescriptorP->descriptorType = USB_STANDARD_DESCRIPTOR_TYPE_DEVICE_STRING;
+		*(langId) = 0x0409;
+	}
+	else
+	{
+		UTF8String_t utfString;
+		
+		stringIndex--;
+		utfString = DEVICE_STRINGS[stringIndex];
+		usbStandardStringDescriptorP->length = utfString.lengthInBytes + 2;
+		usbStandardStringDescriptorP->descriptorType = USB_STANDARD_DESCRIPTOR_TYPE_DEVICE_STRING;
+		memcpy(&usbStandardStringDescriptorP->rawBlock, utfString.charP, utfString.lengthInBytes);
+	}
+	
+	usbControlTransferP->actualLength = usbStandardStringDescriptorP->length;
 }
