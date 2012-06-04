@@ -22,12 +22,12 @@
 static const UTF8String_t USB_DEVICE_STRINGS[] = 
 {
 	{
-		.charP = L"QuadroCore",
-		.lengthInBytes = sizeof(L"QuadroCore")
+		.charP = L"> QuadroCore <",
+		.lengthInBytes = sizeof(L"> QuadroCore <")
 	},
 	{
-		.charP = L"Quadrocopter",
-		.lengthInBytes = sizeof(L"Quadrocopter")
+		.charP = L"QuadroCopter",
+		.lengthInBytes = sizeof(L"QuadroCopter")
 	}
 };
 
