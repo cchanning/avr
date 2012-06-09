@@ -22,7 +22,8 @@
 
 typedef enum _USBEndpointType
 {
-	USB_ENDPOINT_TYPE_CONTROL = USB_EP_TYPE_CONTROL_gc
+	USB_ENDPOINT_TYPE_CONTROL = USB_EP_TYPE_CONTROL_gc,
+	USB_ENDPOINT_TYPE_INTERRUPT = USB_EP_TYPE_BULK_gc
 } USBEndpointType_t;
 
 typedef struct _USBEndpointPipe
@@ -56,7 +57,7 @@ typedef struct _USBEndpointTableConfiguration
 {
 	uint8_t endpointCount;
 	uint8_t maxPacketSize;
-	USBEndpointConfiguration_t endpointConfiguration[1];
+	USBEndpointConfiguration_t endpointConfiguration[2];
 } USBEndpointTableConfiguration_t;
 
 typedef struct _USBEndpointTable

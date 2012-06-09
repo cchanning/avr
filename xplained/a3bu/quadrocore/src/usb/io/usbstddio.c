@@ -28,6 +28,10 @@ static const UTF8String_t USB_DEVICE_STRINGS[] =
 	{
 		.charP = L"QuadroCopter",
 		.lengthInBytes = sizeof(L"QuadroCopter")
+	},
+	{
+		.charP = L"QuadroCopter HID Interface",
+		.lengthInBytes = sizeof(L"QuadroCopter HID Interface")
 	}
 };
 
@@ -65,18 +69,69 @@ void USBDeviceGetDescriptor(USBControlTransfer_t *usbControlTransferP)
 
 void USBDeviceGetConfigurationDescriptor(USBControlTransfer_t *usbControlTransferP)
 {
-	USBStandardDeviceConfigurationDescriptor_t *usbStandardDeviceConfigurationDescriptorP = (USBStandardDeviceConfigurationDescriptor_t *)usbControlTransferP->usbDataBufferInP;
+	// the device configuration goes first, but fill that in once we have populated the buffer
+	ptr_t dataBufferP = usbControlTransferP->usbDataBufferInP + sizeof(USBStandardDeviceConfigurationDescriptor_t);
 	
-	usbStandardDeviceConfigurationDescriptorP->length = sizeof(USBStandardDeviceConfigurationDescriptor_t);
-	usbStandardDeviceConfigurationDescriptorP->descriptorType = USB_STANDARD_DESCRIPTOR_TYPE_DEVICE_CONFIGURATION;
-	usbStandardDeviceConfigurationDescriptorP->totalLength = usbStandardDeviceConfigurationDescriptorP->length;
-	usbStandardDeviceConfigurationDescriptorP->numInterfaces = 0x01;
-	usbStandardDeviceConfigurationDescriptorP->configurationValue = 0x01;
-	usbStandardDeviceConfigurationDescriptorP->configurationIndex = 0x01;
-	usbStandardDeviceConfigurationDescriptorP->attributes = 0x80;
-	usbStandardDeviceConfigurationDescriptorP->maxPower = 0x32;
+	// fill in the interface descriptor (advertise ourself as a HID)
+	{
+		USBStandardInterfaceConfigurationDescriptor_t *usbStandardInterfaceConfigurationDescriptorP = (USBStandardInterfaceConfigurationDescriptor_t *)dataBufferP;
+		usbStandardInterfaceConfigurationDescriptorP->length = sizeof(USBStandardInterfaceConfigurationDescriptor_t);
+		usbStandardInterfaceConfigurationDescriptorP->descriptorType = USB_STANDARD_DESCRIPTOR_TYPE_INTERFACE_CONFIGURATION;
+		usbStandardInterfaceConfigurationDescriptorP->interfaceNumber = 0x00;
+		usbStandardInterfaceConfigurationDescriptorP->alternateSetting = 0x00;
+		usbStandardInterfaceConfigurationDescriptorP->numberOfEndpoints = 1;
+		usbStandardInterfaceConfigurationDescriptorP->interfaceClass = 0x03;
+		usbStandardInterfaceConfigurationDescriptorP->interfaceSubClass = 0x00;
+		usbStandardInterfaceConfigurationDescriptorP->interfaceProtocol = 0x00;
+		usbStandardInterfaceConfigurationDescriptorP->interfaceIndex = 0x03;
+		
+		dataBufferP += usbStandardInterfaceConfigurationDescriptorP->length;
+		usbControlTransferP->actualLength += usbStandardInterfaceConfigurationDescriptorP->length;
+	}
 	
-	usbControlTransferP->actualLength = usbStandardDeviceConfigurationDescriptorP->length;
+	// fill in the HID descriptor
+	{
+		USBStandardHIDConfigurationDescriptor_t *usbStandardHIDConfigurationDescriptorP = (USBStandardHIDConfigurationDescriptor_t *)dataBufferP;
+		usbStandardHIDConfigurationDescriptorP->length = sizeof(USBStandardHIDConfigurationDescriptor_t);
+		usbStandardHIDConfigurationDescriptorP->descriptorType = USB_CLASS_DESCRIPTOR_TYPE_HID;
+		usbStandardHIDConfigurationDescriptorP->version = 0x0110;
+		usbStandardHIDConfigurationDescriptorP->countryCode = 0x00;
+		usbStandardHIDConfigurationDescriptorP->numberOfDescriptors = 0x01;
+		usbStandardHIDConfigurationDescriptorP->nestedDescriptorType = USB_CLASS_DESCRIPTOR_TYPE_REPORT;
+		usbStandardHIDConfigurationDescriptorP->nestedDesciptorLength = 0x01; // to do
+		
+		dataBufferP += usbStandardHIDConfigurationDescriptorP->length;
+		usbControlTransferP->actualLength += usbStandardHIDConfigurationDescriptorP->length;
+	}
+	
+	// fill in the endpoint descriptor
+	{
+		USBStandardEndpointConfigurationDescriptor_t *usbStandardEndpointConfigurationDescriptorP = (USBStandardEndpointConfigurationDescriptor_t *)dataBufferP;
+		usbStandardEndpointConfigurationDescriptorP->length = sizeof(USBStandardEndpointConfigurationDescriptor_t);
+		usbStandardEndpointConfigurationDescriptorP->descriptorType = USB_STANDARD_DESCRIPTOR_TYPE_ENDPOINT;
+		usbStandardEndpointConfigurationDescriptorP->endpointAddress = 0x81;
+		usbStandardEndpointConfigurationDescriptorP->attributes = 0x03; // interrupt data enpoint
+		usbStandardEndpointConfigurationDescriptorP->maxPacketSize = usbControlTransferP->usbEndpointP->usbEndpointConfigurationP->maxPacketSize;
+		usbStandardEndpointConfigurationDescriptorP->interval = 0xFF; // poll every 255ms as we're not going to use this endpoint for sending data back (we'll use endpoint 0 instead)
+		
+		dataBufferP += usbStandardEndpointConfigurationDescriptorP->length;
+		usbControlTransferP->actualLength += usbStandardEndpointConfigurationDescriptorP->length;
+	}
+	
+	// finally, fill in the device configuration descriptor (starting at the beginning of the data buffer)
+	{
+		USBStandardDeviceConfigurationDescriptor_t *usbStandardDeviceConfigurationDescriptorP = (USBStandardDeviceConfigurationDescriptor_t *)usbControlTransferP->usbDataBufferInP;
+		usbStandardDeviceConfigurationDescriptorP->length = sizeof(USBStandardDeviceConfigurationDescriptor_t);
+		usbStandardDeviceConfigurationDescriptorP->descriptorType = USB_STANDARD_DESCRIPTOR_TYPE_DEVICE_CONFIGURATION;
+		usbStandardDeviceConfigurationDescriptorP->totalLength = usbStandardDeviceConfigurationDescriptorP->length + usbControlTransferP->actualLength;
+		usbStandardDeviceConfigurationDescriptorP->numInterfaces = 0x01;
+		usbStandardDeviceConfigurationDescriptorP->configurationValue = 0x01;
+		usbStandardDeviceConfigurationDescriptorP->configurationIndex = 0x01;
+		usbStandardDeviceConfigurationDescriptorP->attributes = 0x80;
+		usbStandardDeviceConfigurationDescriptorP->maxPower = 0x32;	
+		
+		usbControlTransferP->actualLength += usbStandardDeviceConfigurationDescriptorP->length;
+	}
 }
 
 void USBDeviceSetDeferredAddress(USBControlTransfer_t *usbControlTransferP)

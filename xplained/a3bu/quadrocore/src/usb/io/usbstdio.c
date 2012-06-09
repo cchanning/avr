@@ -146,7 +146,7 @@ void USBParseStandardRequestMetaData(USBControlTransfer_t *usbControlTransferP)
 {
 	USBStandardRequest_t *usbStandardRequestP = (USBStandardRequest_t *)usbControlTransferP->usbRequestP;
 	usbControlTransferP->requestedLength = usbStandardRequestP->length;
-	usbControlTransferP->actualLength = usbStandardRequestP->length;
+	usbControlTransferP->actualLength = 0;
 	usbControlTransferP->usbTransferDirection = ((usbStandardRequestP->requestType >> 7) > 0 ? USB_TRANSFER_DIRECTION_IN : USB_TRANSFER_DIRECTION_OUT);
 }
 

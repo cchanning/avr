@@ -52,6 +52,40 @@ typedef struct _USBStandardDeviceConfigurationDescriptor
 	uint8_t maxPower;
 } USBStandardDeviceConfigurationDescriptor_t;
 
+typedef struct _USBStandardInterfaceConfigurationDescriptor
+{
+	uint8_t length;
+	uint8_t descriptorType;
+	uint8_t interfaceNumber;
+	uint8_t alternateSetting;
+	uint8_t numberOfEndpoints;
+	uint8_t interfaceClass;
+	uint8_t interfaceSubClass;
+	uint8_t interfaceProtocol;
+	uint8_t interfaceIndex;	
+} USBStandardInterfaceConfigurationDescriptor_t;
+
+typedef struct _USBStandardHIDConfigurationDescriptor
+{
+	uint8_t length;
+	uint8_t descriptorType;
+	uint16_t version;
+	uint8_t countryCode;
+	uint8_t numberOfDescriptors;
+	uint8_t nestedDescriptorType;
+	uint16_t nestedDesciptorLength;
+} USBStandardHIDConfigurationDescriptor_t;
+
+typedef struct _USBStandardEndpointConfigurationDescriptor
+{
+	uint8_t length;
+	uint8_t descriptorType;
+	uint8_t endpointAddress;
+	uint8_t attributes;
+	uint16_t maxPacketSize;
+	uint8_t interval;
+} USBStandardEndpointConfigurationDescriptor_t;
+
 void USBDeviceReset(void);
 void USBDeviceGetDescriptor(USBControlTransfer_t *usbControlTransferP);
 void USBDeviceGetConfigurationDescriptor(USBControlTransfer_t *usbControlTransferP);

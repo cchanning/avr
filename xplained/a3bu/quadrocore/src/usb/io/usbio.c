@@ -282,6 +282,12 @@ bool_t USBProcessControlTransferRequest(USBControlTransfer_t *usbControlTransfer
 		return false;
 	}
 	
+	// make sure we're not trying to send back more than the requested amount
+	if (usbControlTransferP->actualLength > usbControlTransferP->requestedLength)
+	{
+		usbControlTransferP->actualLength = usbControlTransferP->requestedLength;
+	}
+	
 	return true;
 }
 
