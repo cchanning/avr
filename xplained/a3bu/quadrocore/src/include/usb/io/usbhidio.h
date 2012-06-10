@@ -17,23 +17,10 @@
  *
  ***********************************************************************************************************************/
 
-#ifndef USB_H_
-#define USB_H_
+#ifndef USBHIDIO_H_
+#define USBHIDIO_H_
 
-#include "usb/io/usbep.h"
-#include "usb/io/usbep.h"
-#include "usb/io/usbio.h"
-#include "usb/io/usbstdio.h"
-#include "usb/io/usbstddio.h"
-#include "usb/io/usbhidio.h"
-#include "type/type.h"
+void USBDeviceHIDSetLights(USBControlTransfer_t *usbControlTransferP);
 
-typedef struct _USBConfiguration
-{
-	uint16_t usbControlTransferBufferSize;
-	USBEndpointTableConfiguration_t usbEndpointTableConfiguration;
-} USBConfiguration_t;
 
-bool_t USBModuleInit(const USBConfiguration_t *usbConfigurationP);
-
-#endif /* USB_H_ */
+#endif /* USBHIDIO_H_ */

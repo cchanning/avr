@@ -17,23 +17,13 @@
  *
  ***********************************************************************************************************************/
 
-#ifndef USB_H_
-#define USB_H_
+#include "quadrocore.h"
 
-#include "usb/io/usbep.h"
-#include "usb/io/usbep.h"
-#include "usb/io/usbio.h"
-#include "usb/io/usbstdio.h"
-#include "usb/io/usbstddio.h"
-#include "usb/io/usbhidio.h"
-#include "type/type.h"
-
-typedef struct _USBConfiguration
+void USBDeviceHIDSetLights(USBControlTransfer_t *usbControlTransferP)
 {
-	uint16_t usbControlTransferBufferSize;
-	USBEndpointTableConfiguration_t usbEndpointTableConfiguration;
-} USBConfiguration_t;
-
-bool_t USBModuleInit(const USBConfiguration_t *usbConfigurationP);
-
-#endif /* USB_H_ */
+	if (usbControlTransferP->actualLength > 0)
+	{
+		PORTR.DIRSET = 0xFF;
+		PORTR.OUTSET = *((uint8_t *)usbControlTransferP->usbDataBufferOutP);	
+	}
+}

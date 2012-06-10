@@ -180,6 +180,8 @@ void USBProcessControlTransferOutput(USBControlTransfer_t *usbControlTransferP)
 		*/
 	if (usbControlTransferP->transmittedLength >= usbControlTransferP->requestedLength)
 	{
+		usbControlTransferP->actualLength = usbControlTransferP->requestedLength;
+		
 		if (USBProcessControlTransferRequest(usbControlTransferP))
 		{
 			USBControlTransferReportStatus(usbControlTransferP);
