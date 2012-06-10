@@ -94,5 +94,6 @@ void USBDeviceSetDeferredAddress(USBControlTransfer_t *usbControlTransferP);
 void USBDeviceGetString(USBControlTransfer_t *usbControlTransferP);
 void USBDeviceGetConfiguration(USBControlTransfer_t *usbControlTransferP);
 void USBDeviceSetConfiguration(USBControlTransfer_t * usbControlTransferP);
+void USBDeviceGetHIDReportDescriptor(USBControlTransfer_t *usbControlTransferP);
 
 #endif /* USBSTDDREQ_H_ */

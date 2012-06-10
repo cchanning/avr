@@ -197,3 +197,8 @@ void USBDeviceSetConfiguration(USBControlTransfer_t * usbControlTransferP)
 		We only have one active configuration (always enabled), so there is nothing to do.
 	 */
 }
+
+void USBDeviceGetHIDReportDescriptor(USBControlTransfer_t *usbControlTransferP)
+{
+	
+}
